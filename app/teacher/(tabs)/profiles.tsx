@@ -437,7 +437,7 @@ export default function ChildProfiles() {
                           marginBottom: 8,
                         }}
                       >
-                        Age {child.age}
+                         {child.group} Group
                       </Text>
                       <Text style={{ fontSize: 12, color: "#9ca3af" }}>
                         {child.school}
