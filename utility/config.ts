@@ -5,13 +5,13 @@ export const API_BASE_URL =
     ? "http://localhost:5001"
 
 
-   : "http://192.168.147.157:5001"; // Replace with your real IP
+  // : "http://192.168.147.157:5001"; // Replace with your real IP
 
     //wifi
    // : "http://192.168.8.169:5001";
 
     //vivo
-      // : "http://192.168.43.237:5001";
+       : "http://192.168.43.54:5001";
     
 
         //pramodiIp

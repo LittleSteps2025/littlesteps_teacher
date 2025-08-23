@@ -251,46 +251,46 @@ export default function DailyReportForm() {
 
 
   //meka weda
-const saveProgress = async () => {
-const statusUpdates: { [key: string]: number | string } = {};
+// const saveProgress = async () => {
+// const statusUpdates: { [key: string]: number | string } = {};
 
-    reportFields.forEach((field) => {
-      statusUpdates[field.id] = field.completed ? 1 : 0;
-    });
+//     reportFields.forEach((field) => {
+//       statusUpdates[field.id] = field.completed ? 1 : 0;
+//     });
 
-    statusUpdates.progress = Math.round(progressPercentage);
-    statusUpdates.day_summery = dailySummary;
+//     statusUpdates.progress = Math.round(progressPercentage);
+//     statusUpdates.day_summery = dailySummary;
 
-    // Do NOT add report_id here because it's in the URL param
-    // statusUpdates.report_id = report_id;  <-- remove this line
+//     // Do NOT add report_id here because it's in the URL param
+//     // statusUpdates.report_id = report_id;  <-- remove this line
 
-    console.log("Payload to send:", statusUpdates);
+//     console.log("Payload to send:", statusUpdates);
 
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/reports/child/${report_id}/status`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(statusUpdates),
-        }
-      );
+//     try {
+//       const response = await fetch(
+//         `${API_BASE_URL}/api/reports/child/${report_id}/status`,
+//         {
+//           method: "PUT",
+//           headers: { "Content-Type": "application/json" },
+//           body: JSON.stringify(statusUpdates),
+//         }
+//       );
 
-      const text = await response.text();
-      console.log("Server response text:", text);
+//       const text = await response.text();
+//       console.log("Server response text:", text);
 
-      if (response.ok) {
-        Alert.alert("Progress Saved", "Saved successfully.");
-        router.back();
-      } else {
-        console.error("Save failed with status", response.status);
-        Alert.alert("Save Failed", "Server responded with error.");
-      }
-    } catch (err) {
-      console.error("Save error", err);
-      Alert.alert("Save Failed", "An error occurred.");
-    }
-  };
+//       if (response.ok) {
+//         Alert.alert("Progress Saved", "Saved successfully.");
+//         router.back();
+//       } else {
+//         console.error("Save failed with status", response.status);
+//         Alert.alert("Save Failed", "Server responded with error.");
+//       }
+//     } catch (err) {
+//       console.error("Save error", err);
+//       Alert.alert("Save Failed", "An error occurred.");
+//     }
+//   };
 
 
 
@@ -342,7 +342,7 @@ const statusUpdates: { [key: string]: number } = {};
       statusUpdates,
       checkoutPerson,
       checkoutTime,
-      progress: Math.round(progressPercentage),
+      // progress: Math.round(progressPercentage),
       dailySummary,
       report_id,
     };
@@ -452,7 +452,7 @@ const statusUpdates: { [key: string]: number } = {};
           </View>
 
           {/* Progress Bar */}
-          <View style={styles.progressContainer}>
+          {/* <View style={styles.progressContainer}>
             <View style={styles.progressHeader}>
               <Text style={styles.progressText}>
                 Progress: {completedTasks}/{totalTasks} tasks completed
@@ -469,7 +469,7 @@ const statusUpdates: { [key: string]: number } = {};
                 ]}
               />
             </View>
-          </View>
+          </View> */}
         </LinearGradient>
 
         {/* Arrival Section */}
@@ -717,7 +717,7 @@ const statusUpdates: { [key: string]: number } = {};
         <View style={styles.actionButtonsContainer}>
         <TouchableOpacity
   style={[styles.actionButton, styles.saveButton]}
-  onPress={saveProgress}
+  // onPress={saveProgress}
   disabled={isSubmitted}
 >
   <Save color="#fff" size={16} />
