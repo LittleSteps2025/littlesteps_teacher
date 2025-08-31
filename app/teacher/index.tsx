@@ -39,14 +39,14 @@ export default function Dashboard() {
       route: 'teacher/events',
       color: '#9333ea'
     },
-    //  {
-    //   id: 3,
-    //   title: 'Profile',
-    //   subtitle: 'Manage your profile',
-    //   icon: Profiler,
-    //   route: 'teacher/teacher-profile',
-    //   color: '#9333ea'
-    // }
+     {
+      id: 4,
+      title: 'Appointments',
+      subtitle: 'Manage your appointments',
+      icon: Calendar,
+      route: 'teacher/appointments',
+      color: '#9333ea'
+    }
   ];
 
   const handleNavigation = (route: string) => {
