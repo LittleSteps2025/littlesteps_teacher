@@ -142,29 +142,48 @@ export default function TeacherProfile() {
   }, []);
 
 
-  
-  const handleSaveProfile = async () => {
-    try {
-      const updatedData: any = { phone: editForm.phone, address: editForm.address };
-      if (profileImage) updatedData.profileImage = profileImage;
 
-      const res = await fetch(`${API_BASE_URL}/teacherprofile/${user.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedData),
-      });
-      if (!res.ok) throw new Error("Update failed");
+const handleSaveProfile = async () => {
+  try {
+    const updatedData: any = { phone: editForm.phone, address: editForm.address };
+    if (profileImage) updatedData.profileImage = profileImage;
+  const currentUser = auth.currentUser;
+        if (!currentUser) {
+          Alert.alert("Error", "You must be logged in to view the profile.");
+          return;
+        }
 
-      const updated = await res.json();
-      setTeacherData(updated);
-      await updateProfile(updated);
-      showCustomAlert('success', 'Success', 'Profile updated successfully!');
-      closeEditModal();
+        const idToken = await currentUser.getIdToken();
+    const res = await fetch(`${API_BASE_URL}/api/teacherprofile/edit`, {
+      method: "PUT",
+      headers: { 
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}` // if you use token auth
+      },
+      body: JSON.stringify(updatedData),
+    });
 
-    } catch (error: any) {
-      showCustomAlert('error', 'Error', error.message || 'Update failed.');
+    // ✅ Check for non-200 status
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Update failed");
     }
-  };
+
+    // ✅ Parse JSON safely
+    const updated = await res.json();
+    if (!updated) throw new Error("Backend returned empty response");
+
+    setTeacherData(updated);
+    await updateProfile(updated);
+    showCustomAlert('success', 'Success', 'Profile updated successfully!');
+    closeEditModal();
+
+  } catch (error: any) {
+    showCustomAlert('error', 'Error', error.message || 'Update failed.');
+  }
+};
+
+
 
 
 const handlePasswordChange = async () => {
