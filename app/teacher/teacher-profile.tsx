@@ -19,6 +19,11 @@ import {
 } from 'react-native';
 import { API_BASE_URL } from "../../utility/config";
 import { auth } from '../../config/firebase';
+import { reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
+
+
+
+
 
 export default function TeacherProfile() {
   const router = useRouter();
@@ -159,30 +164,33 @@ export default function TeacherProfile() {
     }
   };
 
-  const handlePasswordChange = async () => {
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword)
-      return showCustomAlert('error', 'Error', 'Please fill all fields');
-    if (passwordForm.newPassword !== passwordForm.confirmPassword)
-      return showCustomAlert('error', 'Error', 'New passwords do not match');
-    if (passwordForm.newPassword.length < 8)
-      return showCustomAlert('error', 'Error', 'Password must be at least 8 chars');
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/teachers/${user.id}/password`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword }),
-      });
-      if (!res.ok) throw new Error("Password change failed");
+const handlePasswordChange = async () => {
+  if (!passwordForm.currentPassword || !passwordForm.newPassword) {
+    return showCustomAlert('error', 'Error', 'Please fill all fields');
+  }
 
-      const data = await res.json();
-      showCustomAlert('success', 'Success', data.message || 'Password changed successfully!');
-      closePasswordModal();
+  try {
+    const user = auth.currentUser;
+    if (!user || !user.email) throw new Error('No user logged in');
 
-    } catch (err: any) {
-      showCustomAlert('error', 'Error', err.message || 'Password change failed');
-    }
-  };
+    // Step 1: Re-authenticate
+    const credential = EmailAuthProvider.credential(
+      user.email,
+      passwordForm.currentPassword
+    );
+    await reauthenticateWithCredential(user, credential);
+
+    // Step 2: Update Password
+    await updatePassword(user, passwordForm.newPassword);
+
+    showCustomAlert('success', 'Success', 'Password changed successfully!');
+    closePasswordModal();
+  } catch (err: any) {
+    showCustomAlert('error', 'Error', err.message);
+  }
+};
+
 
   if (loading) return (
     <SafeAreaView className="flex-1 items-center justify-center">
