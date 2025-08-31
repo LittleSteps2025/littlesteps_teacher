@@ -112,6 +112,7 @@ export default function TeacherProfile() {
         }
 
         const idToken = await currentUser.getIdToken();
+        console.log("ID Token:", idToken);
         const res = await fetch(`${API_BASE_URL}/api/teacherprofile/view`, {
           method: "GET",
           headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
@@ -203,13 +204,13 @@ export default function TeacherProfile() {
 
   const displayData = {
     name: teacherData?.fullName || 'N/A',
-    teacherId: teacherData?.teacherId || 'N/A',
+    teacher_id: teacherData?.teacher_id || 'N/A',
     phone: teacherData?.phone || 'N/A',
     email: teacherData?.email || 'N/A',
     address: teacherData?.address || 'N/A',
     nic: teacherData?.nic || 'N/A',
-    mainGroup: teacherData?.mainGroup || 'N/A',
-    coGroup: teacherData?.coGroup || 'N/A',
+    main_group: teacherData?.main_group || 'N/A',
+    co_group: teacherData?.co_group || 'N/A',
     profileImage: profileImage
       ? { uri: profileImage }
       : teacherData?.profileImage
@@ -224,14 +225,14 @@ export default function TeacherProfile() {
       items: [
         {
           label: 'Full Name',
-          value: teacherData.name,
+          value: teacherData?.name?? "N/A",
           icon: 'person-outline',
           color: '#7c3aed',
           editable: false
         },
         {
           label: 'Teacher ID',
-          value: teacherData.teacherId,
+          value: teacherData.teacher_id,
           icon: 'card-outline',
           color: '#f59e0b',
           editable: false
@@ -271,14 +272,14 @@ export default function TeacherProfile() {
       items: [
         {
           label: 'Allocated Main Group',
-          value: teacherData.mainGroup,
+          value: teacherData.main_group,
           icon: 'school-outline',
           color: '#84cc16',
           editable: false
         },
         {
           label: 'Allocated Co-Group',
-          value: teacherData.coGroup,
+          value: teacherData.co_group,
           icon: 'people-outline',
           color: '#ef4444',
           editable: false
@@ -354,7 +355,7 @@ export default function TeacherProfile() {
               {teacherData.name}
             </Text>
             <Text className="text-gray-600 text-base mt-1">
-              Teacher ID: {teacherData.teacherId}
+              Teacher ID: {teacherData.teacher_id}
             </Text>
             <Text className="text-gray-500 text-sm mt-1 opacity-70">
               Tap image to edit profile
