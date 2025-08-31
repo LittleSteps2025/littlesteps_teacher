@@ -95,7 +95,7 @@ export default function TeacherProfile() {
 
   const handleLogout = async () => {
     await logout();
-    router.replace('/login');
+    router.replace('/teacher/signin');
   };
 
   // Image picker
@@ -141,12 +141,14 @@ export default function TeacherProfile() {
     fetchProfile();
   }, []);
 
+
+  
   const handleSaveProfile = async () => {
     try {
-      const updatedData: any = { phoneNumber: editForm.phoneNumber, address: editForm.address };
+      const updatedData: any = { phone: editForm.phone, address: editForm.address };
       if (profileImage) updatedData.profileImage = profileImage;
 
-      const res = await fetch(`${API_BASE_URL}/teachers/${user.id}`, {
+      const res = await fetch(`${API_BASE_URL}/teacherprofile/${user.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedData),
