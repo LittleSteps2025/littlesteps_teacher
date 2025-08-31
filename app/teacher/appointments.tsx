@@ -324,9 +324,9 @@ const formatDateTime = (dateString: string) => {
                         <User size={36} color={getStatusColor(selectedAppointment.status)} />
                       </View>
 
-                      <Text style={styles.modalAppointmentTitle}>
-                        Meeting with {selectedAppointment.parentName}
-                      </Text>
+                      {/* <Text style={styles.modalAppointmentTitle}>
+                        Meeting with {selectedAppointment.childName}
+                      </Text> */}
 
                       <View style={styles.detailRow}>
                         <User size={24} color="#6b7280" />
