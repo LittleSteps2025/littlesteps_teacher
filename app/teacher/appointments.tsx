@@ -235,9 +235,9 @@ const formatDateTime = (dateString: string) => {
     >
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.headerContainer}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft color="#000" size={24} />
-          </TouchableOpacity>
+           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <ArrowLeft color="#000" size={24} />
+    </TouchableOpacity>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>Appointments</Text>
             <Text style={styles.subtitle}>Manage parent meetings and consultations</Text>
@@ -269,7 +269,7 @@ const formatDateTime = (dateString: string) => {
 
                 <View style={styles.appointmentContent}>
                   <Text style={styles.childName}>{appointment.childName}</Text>
-                  <Text style={styles.parentName}>Parent: {appointment.parentName}</Text>
+                  <Text style={styles.parentName}>Group: {appointment.parentName}</Text>
                  <Text style={styles.appointmentDateTime}>
   {formatDate(appointment.meetingDate)} • {appointment.meetingTime}
 </Text>
