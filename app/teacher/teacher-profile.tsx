@@ -261,35 +261,35 @@ const handlePasswordChange = async () => {
         },
         {
           label: 'Teacher ID',
-          value: teacherData.teacher_id,
+           value: teacherData?.teacher_id || 'N/A',
           icon: 'card-outline',
           color: '#f59e0b',
           editable: false
         },
         {
           label: 'Phone Number',
-          value: teacherData.phone,
+          value: teacherData?.phone || 'N/A',
           icon: 'call-outline',
           color: '#10b981',
           editable: true
         },
         {
           label: 'Email Address',
-          value: teacherData.email,
+          value: teacherData?.email || 'N/A',
           icon: 'mail-outline',
           color: '#3b82f6',
           editable: false
         },
         {
           label: 'Address',
-          value: teacherData.address,
+          value: teacherData?.address || 'N/A',
           icon: 'location-outline',
           color: '#8b5cf6',
           editable: true
         },
         {
           label: 'NIC Number',
-          value: teacherData.nic,
+          value: teacherData?.nic || 'N/A',
           icon: 'document-outline',
           color: '#06b6d4',
           editable: false
@@ -301,14 +301,14 @@ const handlePasswordChange = async () => {
       items: [
         {
           label: 'Allocated Main Group',
-          value: teacherData.main_group,
+          value: teacherData?.main_group || 'N/A',
           icon: 'school-outline',
           color: '#84cc16',
           editable: false
         },
         {
           label: 'Allocated Co-Group',
-          value: teacherData.co_group,
+          value: teacherData?.co_group || 'N/A',
           icon: 'people-outline',
           color: '#ef4444',
           editable: false
@@ -359,7 +359,7 @@ const handlePasswordChange = async () => {
                   }}
                 >
                   <Image
-                    source={teacherData.profileImage}
+                    source={displayData.profileImage}
                     className="w-full h-full"
                     style={{ borderRadius: 64, borderWidth: 4, borderColor: '#3b82f6' }}
                   />
@@ -560,7 +560,7 @@ const handlePasswordChange = async () => {
                     }}
                   >
                     <Image
-                      source={teacherData.profileImage}
+                      source={displayData.profileImage}
                       className="w-full h-full"
                       style={{ borderRadius: 48, borderWidth: 3, borderColor: '#3b82f6' }}
                     />
