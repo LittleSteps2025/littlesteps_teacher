@@ -341,8 +341,14 @@ export default function AppointmentsView() {
               <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
               >
-                <ScrollView contentContainerStyle={styles.modalContent}>
+                <ScrollView 
+                  contentContainerStyle={styles.modalContent}
+                  style={styles.modalScrollView}
+                  showsVerticalScrollIndicator={true}
+                  bounces={false}
+                >
                   {selectedAppointment && (
                     <>
                       <View
@@ -359,10 +365,6 @@ export default function AppointmentsView() {
                           color={getStatusColor(selectedAppointment.status)}
                         />
                       </View>
-
-                      {/* <Text style={styles.modalAppointmentTitle}>
-                        Meeting with {selectedAppointment.childName}
-                      </Text> */}
 
                       <View style={styles.detailRow}>
                         <User size={24} color="#6b7280" />
@@ -494,7 +496,6 @@ export default function AppointmentsView() {
   );
 }
 
-// --- Styles remain unchanged ---
 const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: "row",
@@ -603,7 +604,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    maxHeight: "85%",
+    height: "90%", // Fixed height instead of maxHeight
     padding: 20,
     shadowColor: "#000",
     shadowOpacity: 0.25,
@@ -629,8 +630,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  modalScrollView: {
+    flex: 1,
+  },
   modalContent: {
-    paddingBottom: 40,
+    paddingBottom: 20,
+    flexGrow: 1,
   },
   modalIconCircle: {
     width: 80,
