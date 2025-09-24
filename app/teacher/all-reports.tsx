@@ -12,9 +12,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { FileText, ArrowLeft, Clock, Users } from "lucide-react-native";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "../../../utility/config";
+import { API_BASE_URL } from "../../utility/config";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { auth } from '../../../config/firebase';
+import { auth } from '../../config/firebase';
 
 export default function Children() {
   const [children, setChildren] = useState([]);
@@ -34,7 +34,7 @@ export default function Children() {
         const idToken = await user.getIdToken();
 
         // send request with Authorization header
-        const response = await fetch(`${API_BASE_URL}/api/reports`, {
+        const response = await fetch(`${API_BASE_URL}/api/reports/allreports`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${idToken}`,
@@ -215,12 +215,12 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: "center",
     alignItems: "center",
-    // backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 22,
     marginRight: 12,
-    // shadowColor: "#000",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.0,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },

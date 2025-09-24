@@ -1,6 +1,5 @@
 import CustomAlert from '@/components/CustomAlert';
 import { useUser } from '@/contexts/UserContext';
-import { apiService } from '@/services/apiService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,66 +8,47 @@ import React, { useEffect, useState } from 'react';
 import {
   Image,
   Modal,
-  Pressable,
   SafeAreaView,
   ScrollView,
   StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  Alert
 } from 'react-native';
+import { API_BASE_URL } from "../../utility/config";
+import { auth } from '../../config/firebase';
+import { reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
+
+
+
+
 
 export default function TeacherProfile() {
   const router = useRouter();
   const { user, logout, updateProfile } = useUser();
+  const [loading, setLoading] = useState(true);
+
+  const [teacherData, setTeacherData] = useState<any>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  // Modals
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null);
-  
-  // Edit form state - initialize with user data
-  const [editForm, setEditForm] = useState({
-    name: user?.fullName || '',
-    email: user?.email || '',
-    phoneNumber: user?.phone || '',
-    subject: user?.subject || '',
-    experience: user?.experience || '',
-    qualification: user?.qualification || '',
-    employeeId: user?.employeeId || '',
-    department: user?.department || ''
-  });
 
-  // Update form when user data changes
-  useEffect(() => {
-    if (user) {
-      setEditForm({
-        name: user.fullName || '',
-        email: user.email || '',
-        phoneNumber: user.phone || '',
-        subject: user.subject || '',
-        experience: user.experience || '',
-        qualification: user.qualification || '',
-        employeeId: user.employeeId || '',
-        department: user.department || ''
-      });
-      setProfileImage(user.profileImage || null);
-    }
-  }, [user]);
+  // Edit form
+  const [editForm, setEditForm] = useState({ phoneNumber: '', address: '' });
 
-  // Password form state
+  // Password form
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
+  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false
-  });
-
-  // Custom Alert State
+  // Custom Alert
   const [customAlert, setCustomAlert] = useState({
     visible: false,
     type: 'success' as 'success' | 'error',
@@ -78,6 +58,7 @@ export default function TeacherProfile() {
     onConfirm: undefined as (() => void) | undefined
   });
 
+  // Handlers for Custom Alert
   const showCustomAlert = (
     type: 'success' | 'error',
     title: string,
@@ -85,216 +66,187 @@ export default function TeacherProfile() {
     showCancelButton: boolean = false,
     onConfirm?: () => void
   ) => {
-    setCustomAlert({
-      visible: true,
-      type,
-      title,
-      message,
-      showCancelButton,
-      onConfirm
-    });
+    setCustomAlert({ visible: true, type, title, message, showCancelButton, onConfirm });
+  };
+  const hideCustomAlert = () => setCustomAlert(prev => ({ ...prev, visible: false }));
+
+  // Navigation
+  const handleBack = () => router.push('/teacher');
+
+  // Modal handlers
+  const openEditModal = () => setIsEditModalVisible(true);
+  const closeEditModal = () => setIsEditModalVisible(false);
+  const openPasswordModal = () => setIsPasswordModalVisible(true);
+  const closePasswordModal = () => setIsPasswordModalVisible(false);
+
+  // Edit form input change
+  const handleInputChange = (field: string, value: string) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const hideCustomAlert = () => {
-    setCustomAlert(prev => ({ ...prev, visible: false }));
+  // Password form input change
+  const handlePasswordInputChange = (field: string, value: string) => {
+    setPasswordForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleBack = () => {
-    router.back();
-  };
-
-  const openEditModal = () => {
-    setIsEditModalVisible(true);
-  };
-
-  const closeEditModal = () => {
-    setIsEditModalVisible(false);
-  };
-
-  const openPasswordModal = () => {
-    setIsPasswordModalVisible(true);
-    setPasswordForm({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    });
-  };
-
-  const closePasswordModal = () => {
-    setIsPasswordModalVisible(false);
-    setPasswordForm({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    });
-    setShowPasswords({
-      current: false,
-      new: false,
-      confirm: false
-    });
-  };
-
-  const handleSaveProfile = async () => {
-    try {
-      // Update profile on backend
-      const updatedData = {
-        fullName: editForm.name,
-        email: editForm.email,
-        phone: editForm.phoneNumber,
-        subject: editForm.subject,
-        experience: editForm.experience,
-        qualification: editForm.qualification,
-        employeeId: editForm.employeeId,
-        department: editForm.department,
-        ...(profileImage && { profileImage })
-      };
-      
-      await apiService.updateUserProfile(updatedData);
-      
-      // Update local session data
-      await updateProfile(updatedData);
-      
-      showCustomAlert('success', 'Success', 'Profile updated successfully!');
-      closeEditModal();
-    } catch (error: any) {
-      console.error('Error updating profile:', error);
-      showCustomAlert('error', 'Error', error.message || 'Failed to update profile. Please try again.');
-    }
-  };
-
-  const handlePasswordChange = () => {
-    // Basic validation
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      showCustomAlert('error', 'Error', 'Please fill in all password fields.');
-      return;
-    }
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      showCustomAlert('error', 'Error', 'New passwords do not match.');
-      return;
-    }
-
-    if (passwordForm.newPassword.length < 8) {
-      showCustomAlert('error', 'Error', 'New password must be at least 8 characters long.');
-      return;
-    }
-
-    // Here you would typically validate current password and save new password to backend
-    showCustomAlert('success', 'Success', 'Password changed successfully!');
-    closePasswordModal();
+  const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
+    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      showCustomAlert('success', 'Success', 'Logged out successfully!', false, () => {
-        router.replace('/signin');
-      });
-    } catch (error: any) {
-      console.error('Error during logout:', error);
-      showCustomAlert('error', 'Error', 'Failed to logout. Please try again.');
-    }
+    await logout();
+    router.replace('/teacher/signin');
   };
 
-  const handleInputChange = (field: keyof typeof editForm, value: string) => {
-    setEditForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handlePasswordInputChange = (field: keyof typeof passwordForm, value: string) => {
-    setPasswordForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const togglePasswordVisibility = (field: keyof typeof showPasswords) => {
-    setShowPasswords(prev => ({
-      ...prev,
-      [field]: !prev[field]
-    }));
-  };
-
-  // Image picker functions
-  const requestPermissions = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      showCustomAlert(
-        'error',
-        'Permission Required',
-        'Sorry, we need camera roll permissions to change your profile photo.'
-      );
-      return false;
-    }
-    return true;
-  };
-
+  // Image picker
   const pickImage = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') return showCustomAlert('error', 'Permission Required', 'Media permission needed.');
+    const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, aspect: [1, 1] });
+    if (!result.canceled && result.assets[0]) setProfileImage(result.assets[0].uri);
+  };
 
-    showCustomAlert(
-      'success',
-      'Select Photo',
-      'Choose how you would like to select a photo',
-      true,
-      openImageLibrary
+  // Fetch profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          Alert.alert("Error", "You must be logged in to view the profile.");
+          return;
+        }
+
+        const idToken = await currentUser.getIdToken();
+        console.log("ID Token:", idToken);
+        const res = await fetch(`${API_BASE_URL}/api/teacherprofile/view`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch profile");
+
+        const data = await res.json();
+        setTeacherData(data);
+        setEditForm({ phoneNumber: data.phoneNumber || '', address: data.address || '' });
+        setProfileImage(data.profileImage || null);
+
+      } catch (err) {
+        console.error(err);
+        Alert.alert("Error", "Failed to load profile.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+
+
+const handleSaveProfile = async () => {
+  try {
+    const updatedData: any = { phone: editForm.phone, address: editForm.address };
+    if (profileImage) updatedData.profileImage = profileImage;
+  const currentUser = auth.currentUser;
+        if (!currentUser) {
+          Alert.alert("Error", "You must be logged in to view the profile.");
+          return;
+        }
+
+        const idToken = await currentUser.getIdToken();
+    const res = await fetch(`${API_BASE_URL}/api/teacherprofile/edit`, {
+      method: "PUT",
+      headers: { 
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}` // if you use token auth
+      },
+      body: JSON.stringify(updatedData),
+    });
+
+    // ✅ Check for non-200 status
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Update failed");
+    }
+
+    // ✅ Parse JSON safely
+    const updated = await res.json();
+    if (!updated) throw new Error("Backend returned empty response");
+
+    setTeacherData(updated);
+    await updateProfile(updated);
+    showCustomAlert('success', 'Success', 'Profile updated successfully!');
+    closeEditModal();
+
+  } catch (error: any) {
+    showCustomAlert('error', 'Error', error.message || 'Update failed.');
+  }
+};
+
+
+
+
+const handlePasswordChange = async () => {
+  if (!passwordForm.currentPassword || !passwordForm.newPassword) {
+    return showCustomAlert('error', 'Error', 'Please fill all fields');
+  }
+
+  try {
+    const user = auth.currentUser;
+    if (!user || !user.email) throw new Error('No user logged in');
+
+    // Step 1: Re-authenticate
+    const credential = EmailAuthProvider.credential(
+      user.email,
+      passwordForm.currentPassword
     );
+    await reauthenticateWithCredential(user, credential);
+
+    // Step 2: Update Password
+    await updatePassword(user, passwordForm.newPassword);
+
+    showCustomAlert('success', 'Success', 'Password changed successfully!');
+    closePasswordModal();
+  } catch (err: any) {
+    showCustomAlert('error', 'Error', err.message);
+  }
+};
+
+
+  if (loading) return (
+    <SafeAreaView className="flex-1 items-center justify-center">
+      <Text>Loading...</Text>
+    </SafeAreaView>
+  );
+
+
+  // Image picker
+
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center">
+        <Text>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const displayData = {
+    name: teacherData?.fullName || 'N/A',
+    teacher_id: teacherData?.teacher_id || 'N/A',
+    phone: teacherData?.phone || 'N/A',
+    email: teacherData?.email || 'N/A',
+    address: teacherData?.address || 'N/A',
+    nic: teacherData?.nic || 'N/A',
+    main_group: teacherData?.main_group || 'N/A',
+    co_group: teacherData?.co_group || 'N/A',
+    profileImage: profileImage
+      ? { uri: profileImage }
+      : teacherData?.profileImage
+        ? { uri: teacherData.profileImage }
+        : { uri: 'https://via.placeholder.com/150' }
   };
 
-  const openCamera = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      showCustomAlert(
-        'error',
-        'Permission Required',
-        'Sorry, we need camera permissions to take a photo.'
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setProfileImage(result.assets[0].uri);
-    }
-  };
-
-  const openImageLibrary = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setProfileImage(result.assets[0].uri);
-    }
-  };
-
-  // Teacher data - replace with actual data from your backend/state
-  const teacherData = {
-    name: editForm.name,
-    email: editForm.email,
-    phoneNumber: editForm.phoneNumber,
-    subject: editForm.subject,
-    experience: editForm.experience,
-    qualification: editForm.qualification,
-    employeeId: editForm.employeeId,
-    department: editForm.department,
-    profileImage: profileImage ? { uri: profileImage } : { uri: 'https://images.pexels.com/photos/5212345/pexels-photo-5212345.jpeg?auto=compress&cs=tinysrgb&w=400' }, // Use selected image or default
-    joinDate: 'September 2020',
-    classes: ['Grade 5A', 'Grade 5B', 'Grade 6A'], // List of classes
-    totalStudents: 75
-  };
 
   const profileSections = [
     {
@@ -302,94 +254,75 @@ export default function TeacherProfile() {
       items: [
         {
           label: 'Full Name',
-          value: teacherData.name,
+          value: teacherData?.name?? "N/A",
           icon: 'person-outline',
-          color: '#7c3aed'
+          color: '#7c3aed',
+          editable: false
         },
         {
-          label: 'Email Address',
-          value: teacherData.email,
-          icon: 'mail-outline',
-          color: '#3b82f6'
+          label: 'Teacher ID',
+           value: teacherData?.teacher_id || 'N/A',
+          icon: 'card-outline',
+          color: '#f59e0b',
+          editable: false
         },
         {
           label: 'Phone Number',
-          value: teacherData.phoneNumber,
+          value: teacherData?.phone || 'N/A',
           icon: 'call-outline',
-          color: '#10b981'
+          color: '#10b981',
+          editable: true
         },
         {
-          label: 'Employee ID',
-          value: teacherData.employeeId,
-          icon: 'card-outline',
-          color: '#f59e0b'
+          label: 'Email Address',
+          value: teacherData?.email || 'N/A',
+          icon: 'mail-outline',
+          color: '#3b82f6',
+          editable: false
+        },
+        {
+          label: 'Address',
+          value: teacherData?.address || 'N/A',
+          icon: 'location-outline',
+          color: '#8b5cf6',
+          editable: true
+        },
+        {
+          label: 'NIC Number',
+          value: teacherData?.nic || 'N/A',
+          icon: 'document-outline',
+          color: '#06b6d4',
+          editable: false
         }
       ]
     },
     {
-      title: 'Professional Information',
+      title: 'Class Assignments',
       items: [
         {
-          label: 'Subject/Specialization',
-          value: teacherData.subject,
-          icon: 'book-outline',
-          color: '#8b5cf6'
-        },
-        {
-          label: 'Department',
-          value: teacherData.department,
-          icon: 'business-outline',
-          color: '#06b6d4'
-        },
-        {
-          label: 'Teaching Experience',
-          value: teacherData.experience,
-          icon: 'time-outline',
-          color: '#84cc16'
-        },
-        {
-          label: 'Qualification',
-          value: teacherData.qualification,
+          label: 'Allocated Main Group',
+          value: teacherData?.main_group || 'N/A',
           icon: 'school-outline',
-          color: '#f97316'
-        }
-      ]
-    },
-    {
-      title: 'Teaching Assignment',
-      items: [
+          color: '#84cc16',
+          editable: false
+        },
         {
-          label: 'Classes Teaching',
-          value: teacherData.classes.join(', '),
+          label: 'Allocated Co-Group',
+          value: teacherData?.co_group || 'N/A',
           icon: 'people-outline',
-          color: '#ef4444'
-        },
-        {
-          label: 'Total Students',
-          value: `${teacherData.totalStudents} Students`,
-          icon: 'analytics-outline',
-          color: '#ec4899'
-        },
-        {
-          label: 'Joined School',
-          value: teacherData.joinDate,
-          icon: 'calendar-outline',
-          color: '#14b8a6'
+          color: '#ef4444',
+          editable: false
         }
       ]
     }
   ];
 
   return (
-    <LinearGradient
-      colors={['#DFC1FD', '#f3e8ff', '#F5ECFE', '#F5ECFE', '#e9d5ff', '#DFC1FD']}
-      start={[0, 0]}
-      end={[1, 1]}
-      className="flex-1 pt-5"
-    >
+    <LinearGradient colors={['#DFC1FD', '#f3e8ff']} start={[0, 0]} end={[1, 1]} className="flex-1 pt-5">
       <StatusBar barStyle="dark-content" backgroundColor="#DFC1FD" />
       <SafeAreaView className="flex-1">
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+         
           {/* Header */}
           <View className="px-6 pt-4 pb-2 flex-row items-center justify-between">
             <TouchableOpacity
@@ -426,13 +359,13 @@ export default function TeacherProfile() {
                   }}
                 >
                   <Image
-                    source={teacherData.profileImage}
+                    source={displayData.profileImage}
                     className="w-full h-full"
                     style={{ borderRadius: 64, borderWidth: 4, borderColor: '#3b82f6' }}
                   />
                 </View>
                 {/* Edit Icon */}
-                <View 
+                <View
                   className="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-600 rounded-full items-center justify-center"
                   style={{
                     shadowColor: '#3b82f6',
@@ -451,7 +384,7 @@ export default function TeacherProfile() {
               {teacherData.name}
             </Text>
             <Text className="text-gray-600 text-base mt-1">
-              {teacherData.subject} Teacher • ID: {teacherData.employeeId}
+              Teacher ID: {teacherData.teacher_id}
             </Text>
             <Text className="text-gray-500 text-sm mt-1 opacity-70">
               Tap image to edit profile
@@ -459,7 +392,7 @@ export default function TeacherProfile() {
           </View>
 
           {/* Profile Information Sections */}
-          <View className="px-6 pb-40">
+          <View className="px-6 pb-8">
             {profileSections.map((section, sectionIndex) => (
               <View key={sectionIndex} className="mb-8">
                 <Text className="text-lg font-bold text-gray-700 mb-4">
@@ -478,13 +411,12 @@ export default function TeacherProfile() {
                   }}
                 >
                   {section.items.map((item, itemIndex) => (
-                    <View 
-                      key={itemIndex} 
-                      className={`flex-row items-center py-4 ${
-                        itemIndex < section.items.length - 1 ? 'border-b border-gray-100' : ''
-                      }`}
+                    <View
+                      key={itemIndex}
+                      className={`flex-row items-center py-4 ${itemIndex < section.items.length - 1 ? 'border-b border-gray-100' : ''
+                        }`}
                     >
-                      <View 
+                      <View
                         className="w-12 h-12 rounded-full items-center justify-center mr-4"
                         style={{ backgroundColor: `${item.color}15` }}
                       >
@@ -498,6 +430,11 @@ export default function TeacherProfile() {
                           {item.value}
                         </Text>
                       </View>
+                      {item.editable && (
+                        <View className="w-6 h-6 rounded-full bg-green-100 items-center justify-center">
+                          <Ionicons name="create" size={12} color="#10b981" />
+                        </View>
+                      )}
                     </View>
                   ))}
                 </View>
@@ -525,7 +462,7 @@ export default function TeacherProfile() {
                   onPress={openPasswordModal}
                   className="flex-row items-center py-4 border-b border-gray-100"
                 >
-                  <View 
+                  <View
                     className="w-12 h-12 rounded-full items-center justify-center mr-4"
                     style={{ backgroundColor: '#dc262615' }}
                   >
@@ -546,7 +483,7 @@ export default function TeacherProfile() {
                   onPress={handleLogout}
                   className="flex-row items-center py-4"
                 >
-                  <View 
+                  <View
                     className="w-12 h-12 rounded-full items-center justify-center mr-4"
                     style={{ backgroundColor: '#ef444415' }}
                   >
@@ -566,85 +503,29 @@ export default function TeacherProfile() {
             </View>
           </View>
         </ScrollView>
-        
-        <View className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md">
-          <View
-            className="flex-row justify-around items-center py-4 px-6"
-            style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: -2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              elevation: 8,
-            }}
-          >
-            {/* Home */}
-            <Pressable 
-              className="items-center justify-center py-2"
-              onPress={() => router.push('/TeacherDashboard')}
-            >
-              <View className="w-12 h-12 items-center justify-center">
-                <Ionicons name="home" size={24} color="#9ca3af" />
-              </View>
-              <Text className="text-xs text-gray-500 font-medium mt-1">Home</Text>
-            </Pressable>
 
-            {/* Classes */}
-            <Pressable 
-              className="items-center justify-center py-2"
-              onPress={() => router.push('/TeacherClasses')}
-            >
-              <View className="w-12 h-12 items-center justify-center">
-                <Ionicons name="library" size={24} color="#9ca3af" />
-              </View>
-              <Text className="text-xs text-gray-500 font-medium mt-1">Classes</Text>
-            </Pressable>
-
-            {/* Profile */}
-            <Pressable
-              className="items-center justify-center py-2"
-            >
-              <View className="w-12 h-12 items-center justify-center">
-                <Ionicons name="person" size={24} color="#3b82f6" />
-              </View>
-              <Text className="text-xs text-blue-600 mt-1">Profile</Text>
-            </Pressable>
-
-            {/* More */}
-            <Pressable 
-              className="items-center justify-center py-2"
-              onPress={() => router.push('/TeacherMore')}
-            >
-              <View className="w-12 h-12 items-center justify-center">
-                <Ionicons name="ellipsis-horizontal" size={24} color="#9ca3af" />
-              </View>
-              <Text className="text-xs text-gray-500 mt-1">More</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Edit Profile Modal */}
+        {/* Edit Profile Modal - Only editable fields */}
         <Modal
           visible={isEditModalVisible}
           animationType="slide"
           transparent={true}
           onRequestClose={closeEditModal}
         >
-          <View 
+          <View
             className="flex-1 justify-end"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
           >
-            <TouchableOpacity 
+            <TouchableOpacity
               className="flex-1"
               onPress={closeEditModal}
               activeOpacity={1}
             />
             
-            <View 
+            <View
               className="rounded-t-3xl p-6"
               style={{
                 backgroundColor: 'white',
-                maxHeight: '90%',
+                maxHeight: '70%',
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: -4 },
                 shadowOpacity: 0.25,
@@ -655,9 +536,9 @@ export default function TeacherProfile() {
               {/* Modal Header */}
               <View className="flex-row items-center justify-between mb-6">
                 <Text className="text-xl font-bold text-gray-800">
-                  Edit Teacher Profile
+                  Edit Profile
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={closeEditModal}
                   className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
                 >
@@ -679,12 +560,12 @@ export default function TeacherProfile() {
                     }}
                   >
                     <Image
-                      source={teacherData.profileImage}
+                      source={displayData.profileImage}
                       className="w-full h-full"
                       style={{ borderRadius: 48, borderWidth: 3, borderColor: '#3b82f6' }}
                     />
                   </View>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={pickImage}
                     className="absolute -bottom-1 -right-1 w-7 h-7 bg-blue-600 rounded-full items-center justify-center"
                     style={{
@@ -701,50 +582,8 @@ export default function TeacherProfile() {
                 <Text className="text-sm text-gray-500 mt-2">Tap to change photo</Text>
               </View>
 
-              {/* Edit Form */}
+              {/* Edit Form - Only editable fields */}
               <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Full Name */}
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Full Name
-                  </Text>
-                  <TextInput
-                    value={editForm.name}
-                    onChangeText={(value) => handleInputChange('name', value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
-                    style={{
-                      fontSize: 16,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 2,
-                      elevation: 1
-                    }}
-                  />
-                </View>
-
-                {/* Email */}
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Email Address
-                  </Text>
-                  <TextInput
-                    value={editForm.email}
-                    onChangeText={(value) => handleInputChange('email', value)}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
-                    style={{
-                      fontSize: 16,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 2,
-                      elevation: 1
-                    }}
-                  />
-                </View>
-
                 {/* Phone Number */}
                 <View className="mb-4">
                   <Text className="text-sm font-medium text-gray-700 mb-2">
@@ -763,98 +602,18 @@ export default function TeacherProfile() {
                       shadowRadius: 2,
                       elevation: 1
                     }}
+                    placeholder="Enter phone number"
                   />
                 </View>
 
-                {/* Employee ID */}
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Employee ID
-                  </Text>
-                  <TextInput
-                    value={editForm.employeeId}
-                    onChangeText={(value) => handleInputChange('employeeId', value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
-                    style={{
-                      fontSize: 16,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 2,
-                      elevation: 1
-                    }}
-                  />
-                </View>
-
-                {/* Subject */}
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Subject/Specialization
-                  </Text>
-                  <TextInput
-                    value={editForm.subject}
-                    onChangeText={(value) => handleInputChange('subject', value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
-                    style={{
-                      fontSize: 16,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 2,
-                      elevation: 1
-                    }}
-                  />
-                </View>
-
-                {/* Department */}
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Department
-                  </Text>
-                  <TextInput
-                    value={editForm.department}
-                    onChangeText={(value) => handleInputChange('department', value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
-                    style={{
-                      fontSize: 16,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 2,
-                      elevation: 1
-                    }}
-                  />
-                </View>
-
-                {/* Experience */}
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Teaching Experience
-                  </Text>
-                  <TextInput
-                    value={editForm.experience}
-                    onChangeText={(value) => handleInputChange('experience', value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
-                    style={{
-                      fontSize: 16,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 2,
-                      elevation: 1
-                    }}
-                    placeholder="e.g., 5 years"
-                  />
-                </View>
-
-                {/* Qualification */}
+                {/* Address */}
                 <View className="mb-6">
                   <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Qualification
+                    Address
                   </Text>
                   <TextInput
-                    value={editForm.qualification}
-                    onChangeText={(value) => handleInputChange('qualification', value)}
+                    value={editForm.address}
+                    onChangeText={(value) => handleInputChange('address', value)}
                     multiline
                     numberOfLines={3}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
@@ -868,7 +627,7 @@ export default function TeacherProfile() {
                       shadowRadius: 2,
                       elevation: 1
                     }}
-                    placeholder="e.g., M.Ed in Mathematics, B.Sc in Mathematics"
+                    placeholder="Enter your address"
                   />
                 </View>
 
@@ -915,17 +674,17 @@ export default function TeacherProfile() {
           transparent={true}
           onRequestClose={closePasswordModal}
         >
-          <View 
+          <View
             className="flex-1 justify-end"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
           >
-            <TouchableOpacity 
+            <TouchableOpacity
               className="flex-1"
               onPress={closePasswordModal}
               activeOpacity={1}
             />
             
-            <View 
+            <View
               className="rounded-t-3xl p-6"
               style={{
                 backgroundColor: 'white',
@@ -942,7 +701,7 @@ export default function TeacherProfile() {
                 <Text className="text-xl font-bold text-gray-800">
                   Change Password
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={closePasswordModal}
                   className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
                 >
@@ -976,10 +735,10 @@ export default function TeacherProfile() {
                       onPress={() => togglePasswordVisibility('current')}
                       className="absolute right-4 top-3"
                     >
-                      <Ionicons 
-                        name={showPasswords.current ? 'eye-off' : 'eye'} 
-                        size={20} 
-                        color="#9ca3af" 
+                      <Ionicons
+                        name={showPasswords.current ? 'eye-off' : 'eye'}
+                        size={20}
+                        color="#9ca3af"
                       />
                     </TouchableOpacity>
                   </View>
@@ -1009,10 +768,10 @@ export default function TeacherProfile() {
                       onPress={() => togglePasswordVisibility('new')}
                       className="absolute right-4 top-3"
                     >
-                      <Ionicons 
-                        name={showPasswords.new ? 'eye-off' : 'eye'} 
-                        size={20} 
-                        color="#9ca3af" 
+                      <Ionicons
+                        name={showPasswords.new ? 'eye-off' : 'eye'}
+                        size={20}
+                        color="#9ca3af"
                       />
                     </TouchableOpacity>
                   </View>
@@ -1045,10 +804,10 @@ export default function TeacherProfile() {
                       onPress={() => togglePasswordVisibility('confirm')}
                       className="absolute right-4 top-3"
                     >
-                      <Ionicons 
-                        name={showPasswords.confirm ? 'eye-off' : 'eye'} 
-                        size={20} 
-                        color="#9ca3af" 
+                      <Ionicons
+                        name={showPasswords.confirm ? 'eye-off' : 'eye'}
+                        size={20}
+                        color="#9ca3af"
                       />
                     </TouchableOpacity>
                   </View>
@@ -1103,6 +862,17 @@ export default function TeacherProfile() {
           cancelText="Cancel"
         />
       </SafeAreaView>
+      <CustomAlert
+        visible={customAlert.visible}
+        type={customAlert.type}
+        title={customAlert.title}
+        message={customAlert.message}
+        onClose={hideCustomAlert}
+        onConfirm={customAlert.onConfirm}
+        showCancelButton={customAlert.showCancelButton}
+        confirmText={customAlert.showCancelButton ? 'Yes' : 'OK'}
+        cancelText="Cancel"
+      />
     </LinearGradient>
-  );
-}
+  )
+};

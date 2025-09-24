@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Users, Bell, Calendar } from 'lucide-react-native';
+import { Users, Bell, Calendar, User } from 'lucide-react-native';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -18,7 +18,7 @@ export default function Dashboard() {
     {
       id: 1,
       title: 'Child Profiles',
-      subtitle: 'Manage your children',
+      subtitle: 'Manage children',
       icon: Users,
       route: '/teacher/(tabs)/profiles',
       color: '#8b5cf6'
@@ -39,18 +39,22 @@ export default function Dashboard() {
       route: 'teacher/events',
       color: '#9333ea'
     },
-    //  {
-    //   id: 3,
-    //   title: 'Profile',
-    //   subtitle: 'Manage your profile',
-    //   icon: Profiler,
-    //   route: 'teacher/teacher-profile',
-    //   color: '#9333ea'
-    // }
+     {
+      id: 4,
+      title: 'Appointments',
+      subtitle: 'Manage your appointments',
+      icon: Calendar,
+      route: 'teacher/appointments',
+      color: '#9333ea'
+    }
   ];
 
   const handleNavigation = (route: string) => {
     router.push(route as any);
+  };
+
+  const handleProfileNavigation = () => {
+    router.push('teacher/teacher-profile' as any);
   };
 
   return (
@@ -64,8 +68,19 @@ export default function Dashboard() {
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Welcome Back!</Text>
-          <Text style={styles.subtitle}>What would you like to explore today?</Text>
+          <View style={styles.headerContent}>
+            <View style={styles.headerText}>
+              <Text style={styles.title}>Welcome Back!</Text>
+              <Text style={styles.subtitle}>What would you like to explore today?</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={handleProfileNavigation}
+              activeOpacity={0.8}
+            >
+              <User size={20} color="#8B5CF6" strokeWidth={2} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Navigation Cards */}
@@ -118,6 +133,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 40,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  headerText: {
+    flex: 1,
+  },
+  profileButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+    marginLeft: 12,
   },
   title: {
     fontSize: 32,
