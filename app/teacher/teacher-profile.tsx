@@ -39,7 +39,7 @@ export default function TeacherProfile() {
   const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
 
   // Edit form
-  const [editForm, setEditForm] = useState({ phoneNumber: "", address: "" });
+  const [editForm, setEditForm] = useState({ phone: "", address: "" });
 
   // Password form
   const [passwordForm, setPasswordForm] = useState({
@@ -87,7 +87,13 @@ export default function TeacherProfile() {
   const handleBack = () => router.push("/teacher");
 
   // Modal handlers
-  const openEditModal = () => setIsEditModalVisible(true);
+const openEditModal = () => {
+  setEditForm({
+    phone: teacherData?.phone || "",
+    address: teacherData?.address || "",
+  });
+  setIsEditModalVisible(true);
+};
   const closeEditModal = () => setIsEditModalVisible(false);
   const openPasswordModal = () => setIsPasswordModalVisible(true);
   const closePasswordModal = () => setIsPasswordModalVisible(false);
@@ -153,7 +159,7 @@ export default function TeacherProfile() {
         const data = await res.json();
         setTeacherData(data);
         setEditForm({
-          phoneNumber: data.phoneNumber || "",
+          phone: data.phone || "",
           address: data.address || "",
         });
         setProfileImage(data.profileImage || null);
@@ -311,6 +317,7 @@ const handleSaveProfile = async () => {
     co_group: teacherData?.co_group || "N/A",
    image: teacherData?.image,
 };
+console.log("Teacher data:", teacherData);
 
   const profileSections = [
     {
@@ -655,7 +662,7 @@ const handleSaveProfile = async () => {
                     }}
                   >
                     <Image
-                      source={displayData.image}
+                      source={{ uri: teacherData?.image }}
                       className="w-full h-full"
                       style={{
                         borderRadius: 48,
@@ -691,9 +698,9 @@ const handleSaveProfile = async () => {
                     Phone Number
                   </Text>
                   <TextInput
-                    value={editForm.phoneNumber}
+                    value={editForm.phone}
                     onChangeText={(value) =>
-                      handleInputChange("phoneNumber", value)
+                      handleInputChange("phone", value)
                     }
                     keyboardType="phone-pad"
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
