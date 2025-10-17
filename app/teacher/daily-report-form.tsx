@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { Slot } from 'expo-router';
+import { Slot } from "expo-router";
 
 import { API_BASE_URL } from "../../utility/config"; // Adjust the import path as necessary
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -42,11 +42,8 @@ import {
   LogOut,
   Users,
 } from "lucide-react-native";
-import { auth } from '../../config/firebase'; // your firebase config
-
-
-
-
+import { auth } from "../../config/firebase"; // your firebase config
+import { sendParentNotification } from "../../fcm";
 
 interface ReportField {
   id: string;
@@ -88,90 +85,92 @@ export default function DailyReportForm() {
     totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   useEffect(() => {
- const fetchReport = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/reports/${report_id}`);
-    const report = await response.json();
-    setChildId(report.child_id);
-    console.log("Report ID:", report_id);
+    const fetchReport = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/reports/${report_id}`
+        );
+        const report = await response.json();
+        setChildId(report.child_id);
+        console.log("Report ID:", report_id);
 
-    const formattedArrivalTime = report.arrived_time
-      ? new Date(report.arrived_time).toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        })
-      : "";
+        const formattedArrivalTime = report.arrived_time
+          ? new Date(report.arrived_time).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })
+          : "";
 
-    setReportFields([
-      {
-        id: "breakfirst",
-        title: "Breakfirst",
-        icon: Coffee,
-        time: "",
-        description: report.breakfirst || "No breakfast details recorded",
-        completed: !!report.breakfirst_status,
-        required: true,
-        color: "#F59E0B",
-      },
-      {
-        id: "morning_snack",
-        title: "Morning snack",
-        icon: Coffee,
-        time: "",
-        description: report.morning_snack || "No tea time details recorded",
-        completed: !!report.morning_snack_status,
-        required: false,
-        color: "#D97706",
-      },
-      {
-        id: "lunch",
-        title: "Lunch",
-        icon: Utensils,
-        time: "",
-        description: report.lunch || "No lunch details recorded",
-        completed: !!report.lunch_status,
-        required: true,
-        color: "#EF4444",
-      },
-      {
-        id: "evening_snack",
-        title: "Evening Snack",
-        icon: Coffee,
-        time: "",
-        description: report.evening_snack || "No snack time details recorded",
-        completed: !!report.evening_snack_status,
-        required: false,
-        color: "#06B6D4",
-      },
-      {
-        id: "medicine",
-        title: "Medicine",
-        icon: Pill,
-        time: "",
-        description:
-          report.medicine === "true"
-            ? "Medicine needs to be given today."
-            : "No medicine for today",
-        completed: !!report.medicine_status,
-        required: false,
-        color: "#F97316",
-      },
-    ]);
+        setReportFields([
+          {
+            id: "breakfirst",
+            title: "Breakfirst",
+            icon: Coffee,
+            time: "",
+            description: report.breakfirst || "No breakfast details recorded",
+            completed: !!report.breakfirst_status,
+            required: true,
+            color: "#F59E0B",
+          },
+          {
+            id: "morning_snack",
+            title: "Morning snack",
+            icon: Coffee,
+            time: "",
+            description: report.morning_snack || "No tea time details recorded",
+            completed: !!report.morning_snack_status,
+            required: false,
+            color: "#D97706",
+          },
+          {
+            id: "lunch",
+            title: "Lunch",
+            icon: Utensils,
+            time: "",
+            description: report.lunch || "No lunch details recorded",
+            completed: !!report.lunch_status,
+            required: true,
+            color: "#EF4444",
+          },
+          {
+            id: "evening_snack",
+            title: "Evening Snack",
+            icon: Coffee,
+            time: "",
+            description:
+              report.evening_snack || "No snack time details recorded",
+            completed: !!report.evening_snack_status,
+            required: false,
+            color: "#06B6D4",
+          },
+          {
+            id: "medicine",
+            title: "Medicine",
+            icon: Pill,
+            time: "",
+            description:
+              report.medicine === "true"
+                ? "Medicine needs to be given today."
+                : "No medicine for today",
+            completed: !!report.medicine_status,
+            required: false,
+            color: "#F97316",
+          },
+        ]);
 
-    setSpecialNotes(report.special_note || "");
-    setDailySummary(report.day_summery || "");
-    setCheckoutPerson(report.checkout_person || "");
-    setCheckoutTime(report.checkout_time || "");
-    setArrivalTime(formattedArrivalTime);
-    setArrivalCompleted(!!report.arrived_time);
-  } catch (err) {
-    console.error("Failed to fetch report:", err);
-  } finally {
-    setLoading(false);
-  }
-};
-
+        setSpecialNotes(report.special_note || "");
+        setDailySummary(report.day_summery || "");
+        setCheckoutPerson(report.checkout_person || "");
+        setCheckoutTime(report.checkout_time || "");
+        setArrivalTime(formattedArrivalTime);
+        setArrivalCompleted(!!report.arrived_time);
+      } catch (err) {
+        console.error("Failed to fetch report:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
     if (report_id) fetchReport();
   }, [report_id]);
@@ -208,7 +207,6 @@ export default function DailyReportForm() {
     fetchGuardians();
   }, [child_id]);
 
-  
   const saveArrivalTime = async () => {
     const now = new Date();
 
@@ -249,141 +247,138 @@ export default function DailyReportForm() {
     }
   };
 
-
   //meka weda
-// const saveProgress = async () => {
-// const statusUpdates: { [key: string]: number | string } = {};
+  // const saveProgress = async () => {
+  // const statusUpdates: { [key: string]: number | string } = {};
 
-//     reportFields.forEach((field) => {
-//       statusUpdates[field.id] = field.completed ? 1 : 0;
-//     });
+  //     reportFields.forEach((field) => {
+  //       statusUpdates[field.id] = field.completed ? 1 : 0;
+  //     });
 
-//     statusUpdates.progress = Math.round(progressPercentage);
-//     statusUpdates.day_summery = dailySummary;
+  //     statusUpdates.progress = Math.round(progressPercentage);
+  //     statusUpdates.day_summery = dailySummary;
 
-//     // Do NOT add report_id here because it's in the URL param
-//     // statusUpdates.report_id = report_id;  <-- remove this line
+  //     // Do NOT add report_id here because it's in the URL param
+  //     // statusUpdates.report_id = report_id;  <-- remove this line
 
-//     console.log("Payload to send:", statusUpdates);
+  //     console.log("Payload to send:", statusUpdates);
 
-//     try {
-//       const response = await fetch(
-//         `${API_BASE_URL}/api/reports/child/${report_id}/status`,
-//         {
-//           method: "PUT",
-//           headers: { "Content-Type": "application/json" },
-//           body: JSON.stringify(statusUpdates),
-//         }
-//       );
+  //     try {
+  //       const response = await fetch(
+  //         `${API_BASE_URL}/api/reports/child/${report_id}/status`,
+  //         {
+  //           method: "PUT",
+  //           headers: { "Content-Type": "application/json" },
+  //           body: JSON.stringify(statusUpdates),
+  //         }
+  //       );
 
-//       const text = await response.text();
-//       console.log("Server response text:", text);
+  //       const text = await response.text();
+  //       console.log("Server response text:", text);
 
-//       if (response.ok) {
-//         Alert.alert("Progress Saved", "Saved successfully.");
-//         router.back();
-//       } else {
-//         console.error("Save failed with status", response.status);
-//         Alert.alert("Save Failed", "Server responded with error.");
-//       }
-//     } catch (err) {
-//       console.error("Save error", err);
-//       Alert.alert("Save Failed", "An error occurred.");
-//     }
-//   };
+  //       if (response.ok) {
+  //         Alert.alert("Progress Saved", "Saved successfully.");
+  //         router.back();
+  //       } else {
+  //         console.error("Save failed with status", response.status);
+  //         Alert.alert("Save Failed", "Server responded with error.");
+  //       }
+  //     } catch (err) {
+  //       console.error("Save error", err);
+  //       Alert.alert("Save Failed", "An error occurred.");
+  //     }
+  //   };
 
+  const handleSubmit = async () => {
+    console.log("llll");
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const handleSubmit = async () => {
-  console.log('llll');
-
-  if (!checkoutPerson || !checkoutTime) {
-    Alert.alert("Incomplete Checkout Details", "Please fill out both checkout person and checkout time.");
-    console.log('Incomplete Checkout Details');
-    return;
-  }
-
-  try {
-    const user = auth.currentUser;
-    if (!user) {
-      console.log('User not found');
-      Alert.alert("Error", "You must be logged in to submit the report.");
+    if (!checkoutPerson || !checkoutTime) {
+      Alert.alert(
+        "Incomplete Checkout Details",
+        "Please fill out both checkout person and checkout time."
+      );
+      console.log("Incomplete Checkout Details");
       return;
     }
 
-    const idToken = await user.getIdToken();
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        console.log("User not found");
+        Alert.alert("Error", "You must be logged in to submit the report.");
+        return;
+      }
 
-const statusUpdates: { [key: string]: number } = {};
-    reportFields.forEach((field) => {
-      statusUpdates[field.id] = field.completed ? 1 : 0;
-    });
+      const idToken = await user.getIdToken();
 
-    const payload = {
-      statusUpdates,
-      checkoutPerson,
-      checkoutTime,
-      // progress: Math.round(progressPercentage),
-      dailySummary,
-      report_id,
-    };
+      const statusUpdates: { [key: string]: number } = {};
+      reportFields.forEach((field) => {
+        statusUpdates[field.id] = field.completed ? 1 : 0;
+      });
 
-    const response = await fetch(`${API_BASE_URL}/api/reports/${report_id}/submit`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`,
-      },
-      body: JSON.stringify(payload),
-    });
+      const payload = {
+        statusUpdates,
+        checkoutPerson,
+        checkoutTime,
+        // progress: Math.round(progressPercentage),
+        dailySummary,
+        report_id,
+      };
 
-    if (response.ok) {
-      Alert.alert("Progress Saved", "Report submitted");
-      setIsSubmitted(true);
-      router.back();
-    } else {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to submit report");
+      const response = await fetch(
+        `${API_BASE_URL}/api/reports/${report_id}/submit`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (response.ok) {
+        Alert.alert("Progress Saved", "Report submitted");
+        setIsSubmitted(true);
+
+        // Send FCM notification to parent about child checkout
+        try {
+          const teacherName = user.displayName || user.email || "Teacher";
+          const success = await sendParentNotification(
+            child_id,
+            childName || "Child",
+            teacherName,
+            "checkout",
+            checkoutPerson,
+            checkoutTime
+          );
+          if (success) {
+            console.log("✅ Checkout notification sent to parent");
+          } else {
+            console.warn("⚠️ Failed to send checkout notification");
+          }
+        } catch (fcmError) {
+          console.warn("⚠️ FCM notification failed:", fcmError);
+          // Don't show error to user as report was submitted successfully
+        }
+
+        router.back();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to submit report");
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+
+      let errorMessage = "Failed to submit report.";
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert("Error", errorMessage);
     }
-  } catch (error) {
-  console.error("Submit error:", error);
-
-  let errorMessage = "Failed to submit report.";
-
-  if (error instanceof Error) {
-    errorMessage = error.message;
-  }
-
-  Alert.alert("Error", errorMessage);
-}
-};
-
-
-
-
-
-  
-
-  
+  };
 
   const validateForm = () => {
     const incompleteRequired = reportFields.filter(
@@ -715,14 +710,14 @@ const statusUpdates: { [key: string]: number } = {};
         {/* Action Buttons */}
 
         <View style={styles.actionButtonsContainer}>
-        <TouchableOpacity
-  style={[styles.actionButton, styles.saveButton]}
-  // onPress={saveProgress}
-  disabled={isSubmitted}
->
-  <Save color="#fff" size={16} />
-  <Text style={styles.actionButtonText}>Save Progress</Text>
-</TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.saveButton]}
+            // onPress={saveProgress}
+            disabled={isSubmitted}
+          >
+            <Save color="#fff" size={16} />
+            <Text style={styles.actionButtonText}>Save Progress</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[
@@ -1056,19 +1051,19 @@ const styles = StyleSheet.create({
   pickerWrapper: {
     marginTop: 4,
   },
-pickerContainer: {
-  borderWidth: 1,
-  borderColor: '#D1D5DB',
-  borderRadius: 8,
-  overflow: 'hidden',
-  height: 50,       // Increased height (was likely too small)
-  justifyContent: 'center',
-},
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 8,
+    overflow: "hidden",
+    height: 50, // Increased height (was likely too small)
+    justifyContent: "center",
+  },
 
-picker: {
-  height: 50,       // Match container height
-  fontSize: 16,
-},
+  picker: {
+    height: 50, // Match container height
+    fontSize: 16,
+  },
 
   selectedPersonIndicator: {
     flexDirection: "row",

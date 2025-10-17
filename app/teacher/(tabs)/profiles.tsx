@@ -34,8 +34,8 @@ export default function ChildProfiles() {
     const fetchFilters = async () => {
       try {
         const [pkgRes, grpRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/child/filter/packages`),
-          fetch(`${API_BASE_URL}/api/child/filter/groups`),
+          fetch(`${API_BASE_URL}/api/teachers/child/filter/packages`),
+          fetch(`${API_BASE_URL}/api/teachers/child/filter/groups`),
         ]);
 
         const [pkgData, grpData] = await Promise.all([
@@ -71,7 +71,7 @@ export default function ChildProfiles() {
         const month = new Date().getMonth() + 1;
         const query = `group=${selectedGroup}&pkg=${selectedPackage}&month=${month}`;
 
-        const res = await fetch(`${API_BASE_URL}/api/child?${query}`);
+        const res = await fetch(`${API_BASE_URL}/api/teachers/child?${query}`);
         const data = await res.json();
         if (Array.isArray(data)) {
           setChildrenData(data);
@@ -437,7 +437,7 @@ export default function ChildProfiles() {
                           marginBottom: 8,
                         }}
                       >
-                         {child.group} Group
+                        {child.group} Group
                       </Text>
                       <Text style={{ fontSize: 12, color: "#9ca3af" }}>
                         {child.school}
@@ -453,9 +453,6 @@ export default function ChildProfiles() {
     </LinearGradient>
   );
 }
-
-
-
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

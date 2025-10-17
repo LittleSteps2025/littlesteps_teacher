@@ -1,11 +1,11 @@
-import { images } from '@/assets/images/images';
-import CustomAlert from '@/components/CustomAlert';
-import { useCustomAlert } from '@/hooks/useCustomAlert';
-import { API_BASE_URL } from '../../utility/config';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { images } from "@/assets/images/images";
+import CustomAlert from "@/components/CustomAlert";
+import { useCustomAlert } from "@/hooks/useCustomAlert";
+import { API_BASE_URL } from "../../utility/config";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -16,18 +16,15 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from 'react-native';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../config/firebase'; // adjust if needed
-
-
+  View,
+} from "react-native";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../config/firebase"; // adjust if needed
 
 // Define types for better type safety
 type FormData = {
   email: string;
   password: string;
-
 };
 
 type FormField = keyof FormData;
@@ -40,21 +37,19 @@ type TouchedFields = {
   [K in FormField]?: boolean;
 };
 
-
-
 export default function CreateAccountWithValidation() {
   const router = useRouter();
   const { customAlert, showCustomAlert, hideCustomAlert } = useCustomAlert();
-  
+
   // Form state
   const [formData, setFormData] = useState<FormData>({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
-  
+
   // Validation errors
   const [errors, setErrors] = useState<FormErrors>({});
-  
+
   // UI state
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,13 +58,13 @@ export default function CreateAccountWithValidation() {
   // Validation rules
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) return 'Email is required';
-    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    if (!email) return "Email is required";
+    if (!emailRegex.test(email)) return "Please enter a valid email address";
     return null;
   };
 
   const validatePassword = (password: string) => {
-    if (!password) return 'Password is required';
+    if (!password) return "Password is required";
     // if (password.length < 8) return 'Password must be at least 8 characters';
     // if (!/(?=.*[a-z])/.test(password)) return 'Password must contain at least one lowercase letter';
     // if (!/(?=.*[A-Z])/.test(password)) return 'Password must contain at least one uppercase letter';
@@ -78,41 +73,39 @@ export default function CreateAccountWithValidation() {
     return null;
   };
 
-
   // Real-time validation
   const validateField = (field: FormField, value: string) => {
     let error = null;
-    
+
     switch (field) {
-      case 'email':
+      case "email":
         error = validateEmail(value);
         break;
-      case 'password':
+      case "password":
         error = validatePassword(value);
         break;
-      
     }
-    
-    setErrors(prev => ({
+
+    setErrors((prev) => ({
       ...prev,
-      [field]: error
+      [field]: error,
     }));
-    
+
     return error === null;
   };
 
   // Handle input change
   const handleInputChange = (field: FormField, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
-    
+
     // Validate if field has been touched
     if (touched[field]) {
       validateField(field, value);
     }
-    
+
     // Re-validate confirm password if password changes
     // if (field === 'password' && touched.confirmPassword && formData.confirmPassword) {
     //   validateField('confirmPassword', formData.confirmPassword);
@@ -121,9 +114,9 @@ export default function CreateAccountWithValidation() {
 
   // Handle input blur (when user leaves the field)
   const handleBlur = (field: FormField) => {
-    setTouched(prev => ({
+    setTouched((prev) => ({
       ...prev,
-      [field]: true
+      [field]: true,
     }));
     validateField(field, formData[field]);
   };
@@ -132,63 +125,79 @@ export default function CreateAccountWithValidation() {
   const validateForm = () => {
     const emailError = validateEmail(formData.email);
     const passwordError = validatePassword(formData.password);
-    
+
     const newErrors: FormErrors = {
       email: emailError,
       password: passwordError,
     };
-    
+
     setErrors(newErrors);
     setTouched({
       email: true,
       password: true,
-
     });
-    
-    return !emailError && !passwordError ;
+
+    return !emailError && !passwordError;
   };
 
   // Handle form submission
   const handleCreateAccount = async () => {
     if (!validateForm()) {
-      showCustomAlert('error', 'Validation Error', 'Please fix the errors below');
+      showCustomAlert(
+        "error",
+        "Validation Error",
+        "Please fix the errors below"
+      );
       return;
     }
 
     setIsLoading(true);
-    
-    try {
-      console.log('Attempting teacher login with email:', formData.email);
-      console.log('Using API Base URL:', API_BASE_URL);
-      
-      // Try Firebase authentication for teachers
-      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
-      console.log('Firebase login successful:', userCredential.user.uid);
 
-      showCustomAlert('success', 'Success', 'Login successful!', false, () => {
-        router.push('/teacher');
+    try {
+      console.log("Attempting teacher login with email:", formData.email);
+      console.log("Using API Base URL:", API_BASE_URL);
+
+      // Try Firebase authentication for teachers
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+      console.log("Firebase login successful:", userCredential.user.uid);
+
+      showCustomAlert("success", "Success", "Login successful!", false, () => {
+        router.push("/teacher");
       });
-      
     } catch (error: any) {
-      console.error('Login error:', error);
-      let errorMessage = 'Failed to login. Please try again.';
-      
+      console.error("Login error:", error);
+      let errorMessage = "Failed to login. Please try again.";
+
       // Handle Firebase-specific errors
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No teacher account found with this email address.';
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Incorrect password. Please try again.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Please enter a valid email address.';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many failed attempts. Please try again later.';
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error. Please check your internet connection.';
-      } else if (error.message && error.message.includes('Network request failed')) {
-        errorMessage = 'Cannot connect to server. Please check your internet connection.';
+      if (error.code === "auth/user-not-found") {
+        errorMessage = "No teacher account found with this email address.";
+      } else if (error.code === "auth/wrong-password") {
+        errorMessage = "Incorrect password. Please try again.";
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "Please enter a valid email address.";
+      } else if (error.code === "auth/invalid-credential") {
+        errorMessage =
+          "Invalid email or password. Please check your credentials.";
+      } else if (error.code === "auth/user-disabled") {
+        errorMessage =
+          "This account has been disabled. Please contact support.";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many failed attempts. Please try again later.";
+      } else if (error.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Please check your internet connection.";
+      } else if (
+        error.message &&
+        error.message.includes("Network request failed")
+      ) {
+        errorMessage =
+          "Cannot connect to server. Please check your internet connection.";
       }
-      
-      showCustomAlert('error', 'Login Error', errorMessage);
+
+      showCustomAlert("error", "Login Error", errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -202,7 +211,7 @@ export default function CreateAccountWithValidation() {
   //   if (/(?=.*[A-Z])/.test(password)) strength++;
   //   if (/(?=.*\d)/.test(password)) strength++;
   //   if (/(?=.*[@$!%*?&])/.test(password)) strength++;
-    
+
   //   return strength;
   // };
 
@@ -212,15 +221,26 @@ export default function CreateAccountWithValidation() {
 
   return (
     <LinearGradient
-      colors={['#DFC1FD','#f3e8ff', '#F5ECFE','#F5ECFE','#e9d5ff', '#DFC1FD']}
+      colors={[
+        "#DFC1FD",
+        "#f3e8ff",
+        "#F5ECFE",
+        "#F5ECFE",
+        "#e9d5ff",
+        "#DFC1FD",
+      ]}
       start={[0, 0]}
       end={[1, 1]}
       className="flex-1"
     >
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
       <SafeAreaView className="flex-1 mt-7">
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
           className="flex-1"
         >
           <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -242,7 +262,10 @@ export default function CreateAccountWithValidation() {
               <Text className="text-base text-gray-500 mb-8">
                 Excited to have you on board!
               </Text>
-              <Image source={images.teacher} className="w-40 h-40 mx-auto mb-8 border rounded-full border-purple-400 border-2" />
+              <Image
+                source={images.teacher}
+                className="w-40 h-40 mx-auto mb-8 border rounded-full border-purple-400 border-2"
+              />
               {/* Email Input */}
               <Text className="text-base text-gray-700 mb-2 font-medium">
                 Email
@@ -250,25 +273,26 @@ export default function CreateAccountWithValidation() {
               <View className="mb-1">
                 <TextInput
                   value={formData.email}
-                  onChangeText={(value) => handleInputChange('email', value)}
-                  onBlur={() => handleBlur('email')}
+                  onChangeText={(value) => handleInputChange("email", value)}
+                  onBlur={() => handleBlur("email")}
                   placeholder="Enter your email"
                   placeholderTextColor="#9ca3af"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   style={{
-                    backgroundColor: 'white',
+                    backgroundColor: "white",
                     borderRadius: 12,
                     paddingHorizontal: 16,
                     paddingVertical: 16,
                     fontSize: 16,
                     borderWidth: errors.email && touched.email ? 2 : 0,
-                    borderColor: errors.email && touched.email ? '#ef4444' : 'transparent',
-                    shadowColor: '#000',
+                    borderColor:
+                      errors.email && touched.email ? "#ef4444" : "transparent",
+                    shadowColor: "#000",
                     shadowOffset: { width: 0, height: 1 },
                     shadowOpacity: 0.1,
                     shadowRadius: 2,
-                    elevation: 2
+                    elevation: 2,
                   }}
                 />
               </View>
@@ -280,7 +304,9 @@ export default function CreateAccountWithValidation() {
               {!errors.email && touched.email && (
                 <View className="flex-row items-center mb-4 ml-1">
                   <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
-                  <Text className="text-green-500 text-sm ml-1">Valid email</Text>
+                  <Text className="text-green-500 text-sm ml-1">
+                    Valid email
+                  </Text>
                 </View>
               )}
 
@@ -291,48 +317,53 @@ export default function CreateAccountWithValidation() {
               <View className="relative mb-1">
                 <TextInput
                   value={formData.password}
-                  onChangeText={(value) => handleInputChange('password', value)}
-                  onBlur={() => handleBlur('password')}
+                  onChangeText={(value) => handleInputChange("password", value)}
+                  onBlur={() => handleBlur("password")}
                   placeholder="Create password"
                   placeholderTextColor="#9ca3af"
                   secureTextEntry={!showPassword}
                   style={{
-                    backgroundColor: 'white',
+                    backgroundColor: "white",
                     borderRadius: 12,
                     paddingHorizontal: 16,
                     paddingVertical: 16,
                     paddingRight: 50,
                     fontSize: 16,
                     borderWidth: errors.password && touched.password ? 2 : 0,
-                    borderColor: errors.password && touched.password ? '#ef4444' : 'transparent',
-                    shadowColor: '#000',
+                    borderColor:
+                      errors.password && touched.password
+                        ? "#ef4444"
+                        : "transparent",
+                    shadowColor: "#000",
                     shadowOffset: { width: 0, height: 1 },
                     shadowOpacity: 0.1,
                     shadowRadius: 2,
-                    elevation: 2
+                    elevation: 2,
                   }}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-4"
                 >
-                  <Ionicons 
-                    name={showPassword ? "eye-off" : "eye"} 
-                    size={20} 
-                    color="#9ca3af" 
+                  <Ionicons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color="#9ca3af"
                   />
                 </TouchableOpacity>
               </View>
               <View className="px-5 pb-8 items-end">
-            <View className="flex-row items-center">
-              <TouchableOpacity onPress={() => router.push('/teacher/forgot_password')}>
-                <Text className="text-base text-purple-600 font-semibold">
-                  Forgot password ?
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-              
+                <View className="flex-row items-center">
+                  <TouchableOpacity
+                    onPress={() => router.push("/teacher/forgot_password")}
+                  >
+                    <Text className="text-base text-purple-600 font-semibold">
+                      Forgot password ?
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               {/* Password Strength Indicator */}
               {/* {formData.password.length > 0 && (
                 <View className="mb-2">
@@ -360,13 +391,12 @@ export default function CreateAccountWithValidation() {
                   </View>
                 </View>
               )} */}
-              
+
               {errors.password && touched.password && (
                 <Text className="text-red-500 text-sm mb-4 ml-1">
                   {errors.password}
                 </Text>
               )}
-
 
               {/* Password Requirements */}
               {/* <View className="mb-8 p-4 bg-white/50 rounded-xl">
@@ -400,18 +430,18 @@ export default function CreateAccountWithValidation() {
                 onPress={handleCreateAccount}
                 disabled={isLoading}
                 className={`rounded-3xl py-4 items-center mb-8 ${
-                  isLoading ? 'bg-purple-400' : 'bg-purple-600'
+                  isLoading ? "bg-purple-400" : "bg-purple-600"
                 }`}
                 style={{
-                  shadowColor: '#7c3aed',
+                  shadowColor: "#7c3aed",
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.3,
                   shadowRadius: 8,
-                  elevation: 4
+                  elevation: 4,
                 }}
               >
                 <Text className="text-white text-lg font-semibold">
-                  {isLoading ? 'Logging in...' : 'Log In'}
+                  {isLoading ? "Logging in..." : "Log In"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -423,7 +453,6 @@ export default function CreateAccountWithValidation() {
               <Text className="text-base text-gray-500">
                 Are you new here? please contact supervisor
               </Text>
-
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -438,7 +467,7 @@ export default function CreateAccountWithValidation() {
         onClose={hideCustomAlert}
         onConfirm={customAlert.onConfirm}
         showCancelButton={customAlert.showCancelButton}
-        confirmText={customAlert.showCancelButton ? 'Yes' : 'OK'}
+        confirmText={customAlert.showCancelButton ? "Yes" : "OK"}
         cancelText="Cancel"
       />
     </LinearGradient>
