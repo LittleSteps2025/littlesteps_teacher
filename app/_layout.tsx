@@ -4,6 +4,10 @@ import { Stack } from "expo-router";
 import { setupFCM } from "../fcm";
 import { useEffect } from "react";
 import Constants from "expo-constants";
+import { suppressReactWarnings } from "@/utility/consoleUtils";
+
+// Suppress React warnings
+suppressReactWarnings();
 
 export default function RootLayout() {
   useEffect(() => {
