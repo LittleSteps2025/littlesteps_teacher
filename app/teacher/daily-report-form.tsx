@@ -900,7 +900,7 @@ export default function DailyReportForm() {
               )}
 
               {/* Display Scanned Relationship */}
-              {qrVerified && scannedData && (
+              {/* {qrVerified && scannedData && (
                 <View style={styles.qrVerifiedInfo}>
                   <View style={styles.qrVerifiedBadge}>
                     <Check size={14} color="#10B981" />
@@ -913,7 +913,7 @@ export default function DailyReportForm() {
                     </Text>
                   </Text>
                 </View>
-              )}
+              )} */}
             </View>
 
             <View style={styles.checkoutField}>
