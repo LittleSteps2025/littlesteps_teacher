@@ -9,21 +9,14 @@ import {
   Switch,
   StyleSheet,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { Slot } from 'expo-router';
+import { CameraView, Camera } from "expo-camera";
 
-import { API_BASE_URL } from "../../utility/config"; // Adjust the import path as necessary
+import { API_BASE_URL } from "../../utility/config";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-// export default function Layout() {
-//   return (
-//     <SafeAreaProvider>
-//       <Slot/>
-//     </SafeAreaProvider>
-//   );
-// }
 
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -41,12 +34,10 @@ import {
   User,
   LogOut,
   Users,
+  QrCode,
+  X,
 } from "lucide-react-native";
-import { auth } from '../../config/firebase'; // your firebase config
-
-
-
-
+import { auth } from "../../config/firebase";
 
 interface ReportField {
   id: string;
@@ -59,8 +50,12 @@ interface ReportField {
   color: string;
 }
 
+interface QRData {
+  name: string;
+  relationship: string;
+}
+
 export default function DailyReportForm() {
-  // const { child_id } = useLocalSearchParams();
   const { report_id } = useLocalSearchParams();
 
   const [childName, setChildName] = useState("");
@@ -80,6 +75,13 @@ export default function DailyReportForm() {
   const [guardians, setGuardians] = useState<string[]>([]);
   const [child_id, setChildId] = useState<string | null>(null);
 
+  // QR Scanner states
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [scannedData, setScannedData] = useState<QRData | null>(null);
+  const [qrVerified, setQrVerified] = useState(false);
+
   const totalTasks = reportFields.length + 1;
   const completedTasks =
     reportFields.filter((field) => field.completed).length +
@@ -87,91 +89,101 @@ export default function DailyReportForm() {
   const progressPercentage =
     totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
+  // Request camera permission
   useEffect(() => {
- const fetchReport = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/reports/${report_id}`);
-    const report = await response.json();
-    setChildId(report.child_id);
-    console.log("Report ID:", report_id);
+    (async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === "granted");
+    })();
+  }, []);
 
-    const formattedArrivalTime = report.arrived_time
-      ? new Date(report.arrived_time).toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        })
-      : "";
+  useEffect(() => {
+    const fetchReport = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/reports/${report_id}`
+        );
+        const report = await response.json();
+        setChildId(report.child_id);
+        console.log("Report ID:", report_id);
 
-    setReportFields([
-      {
-        id: "breakfirst",
-        title: "Breakfirst",
-        icon: Coffee,
-        time: "",
-        description: report.breakfirst || "No breakfast details recorded",
-        completed: !!report.breakfirst_status,
-        required: true,
-        color: "#F59E0B",
-      },
-      {
-        id: "morning_snack",
-        title: "Morning snack",
-        icon: Coffee,
-        time: "",
-        description: report.morning_snack || "No tea time details recorded",
-        completed: !!report.morning_snack_status,
-        required: false,
-        color: "#D97706",
-      },
-      {
-        id: "lunch",
-        title: "Lunch",
-        icon: Utensils,
-        time: "",
-        description: report.lunch || "No lunch details recorded",
-        completed: !!report.lunch_status,
-        required: true,
-        color: "#EF4444",
-      },
-      {
-        id: "evening_snack",
-        title: "Evening Snack",
-        icon: Coffee,
-        time: "",
-        description: report.evening_snack || "No snack time details recorded",
-        completed: !!report.evening_snack_status,
-        required: false,
-        color: "#06B6D4",
-      },
-      {
-        id: "medicine",
-        title: "Medicine",
-        icon: Pill,
-        time: "",
-        description:
-          report.medicine === "true"
-            ? "Medicine needs to be given today."
-            : "No medicine for today",
-        completed: !!report.medicine_status,
-        required: false,
-        color: "#F97316",
-      },
-    ]);
+        const formattedArrivalTime = report.arrived_time
+          ? new Date(report.arrived_time).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })
+          : "";
 
-    setSpecialNotes(report.special_note || "");
-    setDailySummary(report.day_summery || "");
-    setCheckoutPerson(report.checkout_person || "");
-    setCheckoutTime(report.checkout_time || "");
-    setArrivalTime(formattedArrivalTime);
-    setArrivalCompleted(!!report.arrived_time);
-  } catch (err) {
-    console.error("Failed to fetch report:", err);
-  } finally {
-    setLoading(false);
-  }
-};
+        setReportFields([
+          {
+            id: "breakfirst",
+            title: "Breakfirst",
+            icon: Coffee,
+            time: "",
+            description: report.breakfirst || "No breakfast details recorded",
+            completed: !!report.breakfirst_status,
+            required: true,
+            color: "#F59E0B",
+          },
+          {
+            id: "morning_snack",
+            title: "Morning snack",
+            icon: Coffee,
+            time: "",
+            description: report.morning_snack || "No tea time details recorded",
+            completed: !!report.morning_snack_status,
+            required: false,
+            color: "#D97706",
+          },
+          {
+            id: "lunch",
+            title: "Lunch",
+            icon: Utensils,
+            time: "",
+            description: report.lunch || "No lunch details recorded",
+            completed: !!report.lunch_status,
+            required: true,
+            color: "#EF4444",
+          },
+          {
+            id: "evening_snack",
+            title: "Evening Snack",
+            icon: Coffee,
+            time: "",
+            description:
+              report.evening_snack || "No snack time details recorded",
+            completed: !!report.evening_snack_status,
+            required: false,
+            color: "#06B6D4",
+          },
+          {
+            id: "medicine",
+            title: "Medicine",
+            icon: Pill,
+            time: "",
+            description:
+              report.medicine === "true"
+                ? "Medicine needs to be given today."
+                : "No medicine for today",
+            completed: !!report.medicine_status,
+            required: false,
+            color: "#F97316",
+          },
+        ]);
 
+        setSpecialNotes(report.special_note || "");
+        setDailySummary(report.day_summery || "");
+        setCheckoutPerson(report.checkout_person || "");
+        setCheckoutTime(report.checkout_time || "");
+        setArrivalTime(formattedArrivalTime);
+        setArrivalCompleted(!!report.arrived_time);
+      } catch (err) {
+        console.error("Failed to fetch report:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
     if (report_id) fetchReport();
   }, [report_id]);
@@ -208,7 +220,6 @@ export default function DailyReportForm() {
     fetchGuardians();
   }, [child_id]);
 
-  
   const saveArrivalTime = async () => {
     const now = new Date();
 
@@ -249,141 +260,144 @@ export default function DailyReportForm() {
     }
   };
 
+  // Handle QR Code Scanning
+  const handleBarCodeScanned = ({ data }: { data: string }) => {
+    setShowQRScanner(false); // Close the scanner first
+    
+    // Trim whitespace from scanned data
+    const scannedName = data.trim();
+    
+    // Check if a pickup person is selected
+    if (!checkoutPerson) {
+      Alert.alert(
+        "No Pickup Person Selected",
+        "Please select a pickup person from the dropdown first before scanning QR code."
+      );
+      return;
+    }
+    
+    // Compare scanned name with selected pickup person (case-insensitive)
+    if (scannedName.toLowerCase() === checkoutPerson.toLowerCase()) {
+      Alert.alert(
+        "✅ Verification Successful",
+        `Scanned Name: ${scannedName}\nSelected Person: ${checkoutPerson}\n\nPickup person verified successfully!`,
+        [{ text: "OK" }]
+      );
+      setQrVerified(true);
+      setScannedData({ name: scannedName, relationship: "Guardian" });
+    } else {
+      Alert.alert(
+        "❌ Verification Failed", 
+        `Scanned Name: ${scannedName}\nSelected Person: ${checkoutPerson}\n\nThe scanned QR code name does not match the selected pickup person.`,
+        [
+          { 
+            text: "Try Again", 
+            onPress: () => setShowQRScanner(true) // Reopen scanner
+          },
+          { 
+            text: "Cancel", 
+            style: "cancel" 
+          }
+        ]
+      );
+    }
+  };
 
-  //meka weda
-// const saveProgress = async () => {
-// const statusUpdates: { [key: string]: number | string } = {};
-
-//     reportFields.forEach((field) => {
-//       statusUpdates[field.id] = field.completed ? 1 : 0;
-//     });
-
-//     statusUpdates.progress = Math.round(progressPercentage);
-//     statusUpdates.day_summery = dailySummary;
-
-//     // Do NOT add report_id here because it's in the URL param
-//     // statusUpdates.report_id = report_id;  <-- remove this line
-
-//     console.log("Payload to send:", statusUpdates);
-
-//     try {
-//       const response = await fetch(
-//         `${API_BASE_URL}/api/reports/child/${report_id}/status`,
-//         {
-//           method: "PUT",
-//           headers: { "Content-Type": "application/json" },
-//           body: JSON.stringify(statusUpdates),
-//         }
-//       );
-
-//       const text = await response.text();
-//       console.log("Server response text:", text);
-
-//       if (response.ok) {
-//         Alert.alert("Progress Saved", "Saved successfully.");
-//         router.back();
-//       } else {
-//         console.error("Save failed with status", response.status);
-//         Alert.alert("Save Failed", "Server responded with error.");
-//       }
-//     } catch (err) {
-//       console.error("Save error", err);
-//       Alert.alert("Save Failed", "An error occurred.");
-//     }
-//   };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const handleSubmit = async () => {
-  console.log('llll');
-
-  if (!checkoutPerson || !checkoutTime) {
-    Alert.alert("Incomplete Checkout Details", "Please fill out both checkout person and checkout time.");
-    console.log('Incomplete Checkout Details');
-    return;
-  }
-
-  try {
-    const user = auth.currentUser;
-    if (!user) {
-      console.log('User not found');
-      Alert.alert("Error", "You must be logged in to submit the report.");
+  const openQRScanner = () => {
+    if (!checkoutPerson) {
+      Alert.alert(
+        "Select Pickup Person",
+        "Please select a pickup person first before scanning QR code."
+      );
       return;
     }
 
-    const idToken = await user.getIdToken();
-
-const statusUpdates: { [key: string]: number } = {};
-    reportFields.forEach((field) => {
-      statusUpdates[field.id] = field.completed ? 1 : 0;
-    });
-
-    const payload = {
-      statusUpdates,
-      checkoutPerson,
-      checkoutTime,
-      // progress: Math.round(progressPercentage),
-      dailySummary,
-      report_id,
-    };
-
-    const response = await fetch(`${API_BASE_URL}/api/reports/${report_id}/submit`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (response.ok) {
-      Alert.alert("Progress Saved", "Report submitted");
-      setIsSubmitted(true);
-      router.back();
-    } else {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to submit report");
+    if (hasPermission === null) {
+      Alert.alert("Permission Required", "Requesting camera permission...");
+      return;
     }
-  } catch (error) {
-  console.error("Submit error:", error);
 
-  let errorMessage = "Failed to submit report.";
+    if (hasPermission === false) {
+      Alert.alert(
+        "No Camera Access",
+        "Please grant camera permission in your device settings to scan QR codes."
+      );
+      return;
+    }
 
-  if (error instanceof Error) {
-    errorMessage = error.message;
-  }
+    setShowQRScanner(true);
+  };
 
-  Alert.alert("Error", errorMessage);
-}
-};
+  const handleSubmit = async () => {
+    if (!checkoutPerson || !checkoutTime) {
+      Alert.alert(
+        "Incomplete Checkout Details",
+        "Please fill out both checkout person and checkout time."
+      );
+      return;
+    }
 
+    if (!qrVerified) {
+      Alert.alert(
+        "QR Verification Required",
+        "Please scan the pickup person's QR code to verify their identity before submitting."
+      );
+      return;
+    }
 
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert("Error", "You must be logged in to submit the report.");
+        return;
+      }
 
+      const idToken = await user.getIdToken();
 
+      const statusUpdates: { [key: string]: number } = {};
+      reportFields.forEach((field) => {
+        statusUpdates[field.id] = field.completed ? 1 : 0;
+      });
 
-  
+      const payload = {
+        statusUpdates,
+        checkoutPerson,
+        checkoutTime,
+        dailySummary,
+        report_id,
+        qrVerified: qrVerified,
+        pickupPersonRelationship: scannedData?.relationship || "",
+      };
 
-  
+      const response = await fetch(
+        `${API_BASE_URL}/api/reports/${report_id}/submit`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (response.ok) {
+        Alert.alert("Progress Saved", "Report submitted");
+        setIsSubmitted(true);
+        router.back();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to submit report");
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+      let errorMessage = "Failed to submit report.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      Alert.alert("Error", errorMessage);
+    }
+  };
 
   const validateForm = () => {
     const incompleteRequired = reportFields.filter(
@@ -426,7 +440,6 @@ const statusUpdates: { [key: string]: number } = {};
   return (
     <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       <ScrollView style={styles.container}>
-        {/* Header with Progress Bar */}
         <LinearGradient colors={["#DFC1FD", "#b279ec"]} style={styles.header}>
           <View style={styles.headerRow}>
             <TouchableOpacity
@@ -450,32 +463,10 @@ const statusUpdates: { [key: string]: number } = {};
               </View>
             </View>
           </View>
-
-          {/* Progress Bar */}
-          {/* <View style={styles.progressContainer}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressText}>
-                Progress: {completedTasks}/{totalTasks} tasks completed
-              </Text>
-              <Text style={styles.progressPercentage}>
-                {Math.round(progressPercentage)}%
-              </Text>
-            </View>
-            <View style={styles.progressBarBackground}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  { width: `${progressPercentage}%` },
-                ]}
-              />
-            </View>
-          </View> */}
         </LinearGradient>
 
         {/* Arrival Section */}
-
         <View style={styles.taskCard}>
-          {/* Header */}
           <View style={styles.taskHeader}>
             <View style={styles.taskHeaderLeft}>
               <View
@@ -490,7 +481,6 @@ const statusUpdates: { [key: string]: number } = {};
             </View>
           </View>
 
-          {/* Content */}
           <View style={styles.taskContent}>
             <View style={styles.timeSection}>
               <Text style={styles.timeLabel}>Arrival Time:</Text>
@@ -598,7 +588,7 @@ const statusUpdates: { [key: string]: number } = {};
           />
         </View>
 
-        {/* Enhanced Checkout Section */}
+        {/* Enhanced Checkout Section with QR Scanner */}
         <View style={styles.checkoutCard}>
           <View style={styles.checkoutHeader}>
             <View style={styles.checkoutHeaderLeft}>
@@ -624,7 +614,11 @@ const statusUpdates: { [key: string]: number } = {};
                 <View style={styles.pickerContainer}>
                   <Picker
                     selectedValue={checkoutPerson}
-                    onValueChange={(itemValue) => setCheckoutPerson(itemValue)}
+                    onValueChange={(itemValue) => {
+                      setCheckoutPerson(itemValue);
+                      setQrVerified(false);
+                      setScannedData(null);
+                    }}
                     enabled={!isSubmitted}
                     style={styles.picker}
                   >
@@ -644,14 +638,59 @@ const statusUpdates: { [key: string]: number } = {};
                   </Picker>
                 </View>
                 {checkoutPerson ? (
-                  <View style={styles.selectedPersonIndicator}>
-                    <Check size={14} color="#10B981" />
-                    <Text style={styles.selectedPersonText}>
-                      {checkoutPerson}
-                    </Text>
-                  </View>
+                  <>
+                    <View style={styles.selectedPersonIndicator}>
+                      <Check size={14} color="#10B981" />
+                      <Text style={styles.selectedPersonText}>
+                        {checkoutPerson}
+                      </Text>
+                    </View>
+                    
+                    {/* QR Scan Button */}
+                    <TouchableOpacity
+                      style={styles.scanButton}
+                      onPress={() => setScanning(true)}
+                      disabled={isSubmitted}
+                    >
+                      <View style={styles.scanButtonContent}>
+                        <Text style={styles.scanButtonText}>Scan QR Code to Verify</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </>
                 ) : null}
               </View>
+
+              {/* QR Scanner Button */}
+              {checkoutPerson && !isSubmitted && (
+                <TouchableOpacity
+                  style={[
+                    styles.qrScanButton,
+                    qrVerified && styles.qrScanButtonVerified,
+                  ]}
+                  onPress={openQRScanner}
+                >
+                  <QrCode size={18} color="#fff" />
+                  <Text style={styles.qrScanButtonText}>
+                    {qrVerified ? "QR Verified ✓" : "Scan QR Code"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Display Scanned Relationship */}
+              {qrVerified && scannedData && (
+                <View style={styles.qrVerifiedInfo}>
+                  <View style={styles.qrVerifiedBadge}>
+                    <Check size={14} color="#10B981" />
+                    <Text style={styles.qrVerifiedText}>Verified</Text>
+                  </View>
+                  <Text style={styles.relationshipText}>
+                    Relationship:{" "}
+                    <Text style={styles.relationshipValue}>
+                      {scannedData.relationship}
+                    </Text>
+                  </Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.checkoutField}>
@@ -700,6 +739,14 @@ const statusUpdates: { [key: string]: number } = {};
                       <Text style={styles.summaryValue}>{checkoutPerson}</Text>
                     </View>
                   )}
+                  {scannedData && (
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Relationship:</Text>
+                      <Text style={styles.summaryValue}>
+                        {scannedData.relationship}
+                      </Text>
+                    </View>
+                  )}
                   {checkoutTime && (
                     <View style={styles.summaryRow}>
                       <Text style={styles.summaryLabel}>Time:</Text>
@@ -713,16 +760,14 @@ const statusUpdates: { [key: string]: number } = {};
         </View>
 
         {/* Action Buttons */}
-
         <View style={styles.actionButtonsContainer}>
-        <TouchableOpacity
-  style={[styles.actionButton, styles.saveButton]}
-  // onPress={saveProgress}
-  disabled={isSubmitted}
->
-  <Save color="#fff" size={16} />
-  <Text style={styles.actionButtonText}>Save Progress</Text>
-</TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.saveButton]}
+            disabled={isSubmitted}
+          >
+            <Save color="#fff" size={16} />
+            <Text style={styles.actionButtonText}>Save Progress</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[
@@ -741,11 +786,243 @@ const statusUpdates: { [key: string]: number } = {};
 
         <View style={{ height: 20 }} />
       </ScrollView>
+
+      {/* QR Scanner Modal */}
+      <Modal
+        visible={showQRScanner}
+        animationType="slide"
+        onRequestClose={() => setShowQRScanner(false)}
+      >
+        <View style={styles.qrScannerContainer}>
+          <View style={styles.qrScannerHeader}>
+            <Text style={styles.qrScannerTitle}>
+              Scan Pickup Person QR Code
+            </Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowQRScanner(false)}
+            >
+              <X size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.qrScannerInfo}>
+            <Text style={styles.qrScannerInfoText}>
+              Scanning for:{" "}
+              <Text style={styles.qrScannerInfoBold}>{checkoutPerson}</Text>
+            </Text>
+            <Text style={styles.qrScannerInstructions}>
+              Position the QR code within the frame
+            </Text>
+          </View>
+
+       <View style={styles.cameraContainer}>
+  <CameraView
+    style={StyleSheet.absoluteFill}
+    facing="back"
+    onBarcodeScanned={handleBarCodeScanned}
+    barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+  />
+  
+  {/* Overlay frame */}
+  <View style={styles.qrFrame}>
+    <View style={styles.qrCornerTopLeft} />
+    <View style={styles.qrCornerTopRight} />
+    <View style={styles.qrCornerBottomLeft} />
+    <View style={styles.qrCornerBottomRight} />
+  </View>
+</View>
+
+
+          <View style={styles.qrScannerFooter}>
+            <Text style={styles.qrScannerFooterText}>
+              Make sure the QR code is well lit and clearly visible
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
+
+
 const styles = StyleSheet.create({
+
+  cameraContainer: {
+  flex: 1,
+  position: "relative",
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: "#000",
+  overflow: "hidden",
+},
+
+camera: {
+  ...StyleSheet.absoluteFillObject,
+},
+
+qrFrame: {
+  width: 250,
+  height: 250,
+  borderWidth: 2,
+  borderColor: "rgba(255, 255, 255, 0.5)",
+  justifyContent: "center",
+  alignItems: "center",
+  position: "absolute",
+},
+
+qrCornerTopLeft: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  width: 40,
+  height: 40,
+  borderTopWidth: 4,
+  borderLeftWidth: 4,
+  borderColor: "#fff",
+  borderRadius: 6,
+},
+
+qrCornerTopRight: {
+  position: "absolute",
+  top: 0,
+  right: 0,
+  width: 40,
+  height: 40,
+  borderTopWidth: 4,
+  borderRightWidth: 4,
+  borderColor: "#fff",
+  borderRadius: 6,
+},
+
+qrCornerBottomLeft: {
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  width: 40,
+  height: 40,
+  borderBottomWidth: 4,
+  borderLeftWidth: 4,
+  borderColor: "#fff",
+  borderRadius: 6,
+},
+
+qrCornerBottomRight: {
+  position: "absolute",
+  bottom: 0,
+  right: 0,
+  width: 40,
+  height: 40,
+  borderBottomWidth: 4,
+  borderRightWidth: 4,
+  borderColor: "#fff",
+  borderRadius: 6,
+},
+
+  qrScannerInfo: {
+    backgroundColor: "#fff5f7", // gentle rose blush 💗
+    borderRadius: 16,
+    padding: 16,
+    marginVertical: 10,
+    borderWidth: 1.5,
+    borderColor: "#f9c2d3", // light pink border 🌷
+    alignItems: "center",
+    shadowColor: "#f48fb1",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+
+  qrScannerInfoText: {
+    fontSize: 15,
+    color: "#e91e63", // deep pink 💞
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 6,
+  },
+
+  qrScannerInfoBold: {
+    color: "#c2185b", // romantic magenta 🌹
+    fontWeight: "800",
+  },
+
+  qrScannerInstructions: {
+    fontSize: 13,
+    color: "#555",
+    fontStyle: "italic",
+    textAlign: "center",
+    marginTop: 2,
+  },
+
+  qrVerifiedInfo: {
+    backgroundColor: "#fff0f6", // soft rose background 💗
+    borderRadius: 16,
+    padding: 14,
+    marginVertical: 10,
+    borderWidth: 1.5,
+    borderColor: "#f9b6d2", // soft pink border 🌸
+    shadowColor: "#f48fb1",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+
+  qrVerifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e6fffa", // minty background 💚
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    alignSelf: "flex-start",
+    marginBottom: 6,
+  },
+
+  qrVerifiedText: {
+    color: "#10B981", // emerald green 🌿
+    fontWeight: "bold",
+    fontSize: 13,
+    marginLeft: 5,
+  },
+
+  relationshipText: {
+    fontSize: 14,
+    color: "#444",
+    marginTop: 6,
+    fontWeight: "600",
+  },
+
+  relationshipValue: {
+    color: "#e91e63", // deep romantic pink 💕
+    fontWeight: "700",
+  },
+
+  qrScanButtonVerified: {
+    backgroundColor: "#ffb6c1", // light pink 💕
+    borderRadius: 10,
+    padding: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qrScannerContainer: {
+    flex: 1,
+    backgroundColor: "#fff5f7", // soft rosy background 🌸
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#f9c2d3", // light pink border 💞
+    shadowColor: "#f48fb1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1056,19 +1333,19 @@ const styles = StyleSheet.create({
   pickerWrapper: {
     marginTop: 4,
   },
-pickerContainer: {
-  borderWidth: 1,
-  borderColor: '#D1D5DB',
-  borderRadius: 8,
-  overflow: 'hidden',
-  height: 50,       // Increased height (was likely too small)
-  justifyContent: 'center',
-},
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 8,
+    overflow: "hidden",
+    height: 50, // Increased height (was likely too small)
+    justifyContent: "center",
+  },
 
-picker: {
-  height: 50,       // Match container height
-  fontSize: 16,
-},
+  picker: {
+    height: 50, // Match container height
+    fontSize: 16,
+  },
 
   selectedPersonIndicator: {
     flexDirection: "row",
@@ -1170,5 +1447,96 @@ picker: {
     color: "#fff",
     fontWeight: "600",
     fontSize: 14,
+  },
+  // QR Scanner styles
+
+  scanButton: {
+    backgroundColor: "#8B5CF6",
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scanButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  scanButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  closeButton: {
+    position: "absolute",
+    top: 40,
+    right: 20,
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 25,
+    zIndex: 1001,
+  },
+  closeButtonText: {
+    color: "#000",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  qrMaskContainer: {
+    flex: 1,
+    backgroundColor: "transparent",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  qrFrame: {
+    width: 250,
+    height: 250,
+    borderWidth: 2,
+    borderColor: "#fff",
+    borderRadius: 20,
+  },
+  qrGuideText: {
+    color: "#fff",
+    fontSize: 16,
+    marginTop: 20,
+    textAlign: "center",
+  },
+  // Additional QR Scanner styles
+  qrScanButton: {
+    backgroundColor: "#8B5CF6",
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+  qrScanButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  qrScannerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 20,
+    backgroundColor: "#8B5CF6",
+  },
+  qrScannerTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  qrScannerFooter: {
+    padding: 20,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    alignItems: "center",
+  },
+  qrScannerFooterText: {
+    color: "#fff",
+    fontSize: 14,
+    textAlign: "center",
   },
 });
