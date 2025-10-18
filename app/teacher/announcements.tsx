@@ -110,10 +110,7 @@ export default function Announcements() {
             <View style={styles.announcementsContainer}>
               {Array.isArray(announcements) && announcements.length > 0 ? (
                 announcements.map((announcement, index) => (
-                  <View
-                    key={announcement.ann_id || index}
-                    style={styles.announcementCard}
-                  >
+                  <View key={index} style={styles.announcementCard}>
                     <View style={styles.announcementHeader}>
                       <Megaphone size={20} color="#a855f7" />
                       <Text style={styles.announcementTitle}>
@@ -128,26 +125,7 @@ export default function Announcements() {
                         📅 {new Date(announcement.date).toLocaleDateString()} at{" "}
                         {announcement.time}
                       </Text>
-                      {announcement.author_name && (
-                        <Text style={styles.announcementAuthor}>
-                          👤 By {announcement.author_name}
-                        </Text>
-                      )}
                     </View>
-                    {announcement.status && (
-                      <View style={styles.statusContainer}>
-                        <Text
-                          style={[
-                            styles.statusText,
-                            announcement.status === "draft"
-                              ? styles.statusDraft
-                              : styles.statusPublished,
-                          ]}
-                        >
-                          {announcement.status.toUpperCase()}
-                        </Text>
-                      </View>
-                    )}
                   </View>
                 ))
               ) : (
