@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -16,8 +16,10 @@ import axios from 'axios';
 import { API_BASE_URL } from '../../utility/config';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { auth } from '../../config/firebase';
-import { getIdToken } from 'firebase/auth';
+import { auth } from "../../config/firebase"; // adjust import path
+import { getIdToken } from "firebase/auth";
+import { useUser } from "../../contexts/UserContext";
+import { sendParentNotification } from "../../fcm";
 
 interface EmergencyContact {
   name: string;
@@ -31,7 +33,7 @@ interface Child {
   age: number;
   group_name: string;
   parent_phone: string;
-  gender: 'male' | 'female';
+  gender: "male" | "female";
   dob: string;
   address: string;
   emergency_notes: string;
@@ -41,8 +43,9 @@ interface Child {
 const ChildPage: React.FC = () => {
   const { childId } = useLocalSearchParams();
   const router = useRouter();
+  const user = useUser();
   const [child, setChild] = useState<Child | null>(null);
-  const [emergencyNotes, setEmergencyNotes] = useState('');
+  const [emergencyNotes, setEmergencyNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSensitiveData, setShowSensitiveData] = useState(false);
@@ -59,54 +62,61 @@ const [loadingSensitive, setLoadingSensitive] = useState(false);
 
   const getColorScheme = (gender: string) => {
     switch (gender) {
-      case 'female':
-        return { ring: '#60A5FA', accent: '#2563EB' };
-      case 'male':
-        return { ring: '#F472B6', accent: '#DB2777' };
+      case "female":
+        return { ring: "#60A5FA", accent: "#2563EB" };
+      case "male":
+        return { ring: "#F472B6", accent: "#DB2777" };
       default:
-        return { ring: '#C084FC', accent: '#9333EA' };
+        return { ring: "#C084FC", accent: "#9333EA" };
     }
   };
 
-  const fetchChild = async () => {
+  const fetchChild = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/child/${childId}`);
+      const res = await axios.get(
+        `${API_BASE_URL}/api/teachers/child/${childId}`
+      );
       setChild(res.data);
-      setEmergencyNotes(res.data.emergency_notes || '');
+      setEmergencyNotes(res.data.emergency_notes || "");
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch child data');
+      Alert.alert("Error", "Failed to fetch child data");
     } finally {
       setLoading(false);
     }
-  };
-
+  }, [childId]);
   useEffect(() => {
     if (childId) {
       fetchChild();
     }
-  }, [childId]);
+  }, [childId, fetchChild]);
 
   useEffect(() => {
     const user = auth.currentUser;
     if (user) {
-      console.log('Current user at mount:', user.uid);
+      console.log("Current user at mount:", user.uid);
     } else {
-      console.log('No current user at mount');
+      console.log("No current user at mount");
     }
   }, []);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        console.log('User signed in:', user.uid);
+        console.log("User signed in:", user.uid);
       } else {
-        console.log('User not signed in');
+        console.log("User not signed in");
       }
     });
 
     return unsubscribe;
   }, []);
 
+  const handleSave = async () => {
+    console.log("asa");
+    if (!child) {
+      console.log("No child found, returning");
+      return;
+    }
   const handleSave = async () => {
     console.log('asa');
     if (!child) {
@@ -118,6 +128,13 @@ const [loadingSensitive, setLoadingSensitive] = useState(false);
 
     const user = auth.currentUser;
     if (!user) {
+      console.log("No user found");
+      Alert.alert("Error", "User not authenticated");
+      return;
+    }
+    console.log("User found:", user.uid);
+    const user = auth.currentUser;
+    if (!user) {
       console.log('No user found');
       Alert.alert('Error', 'User not authenticated');
       return;
@@ -125,22 +142,24 @@ const [loadingSensitive, setLoadingSensitive] = useState(false);
     console.log('User found:', user.uid);
 
     setSaving(true);
+    console.log("Saving set to true");
+    setSaving(true);
     console.log('Saving set to true');
 
     try {
       let token;
       try {
         token = await getIdToken(user);
-        console.log('Firebase Token:', token);
-        Alert.alert('handleSave called');
+        console.log("Firebase Token:", token);
+        Alert.alert("handleSave called");
       } catch (tokenError) {
-        console.error('Error getting token:', tokenError);
-        Alert.alert('Error', 'Failed to get auth token.');
+        console.error("Error getting token:", tokenError);
+        Alert.alert("Error", "Failed to get auth token.");
         setSaving(false);
-        return;
+        return; // stop further execution
       }
 
-      console.log('Child IDdddddd');
+      console.log("Child IDdddddd");
 
       await axios.post(
         `${API_BASE_URL}/api/child/${child.child_id}/notes`,
@@ -206,7 +225,9 @@ const toggleSensitiveData = async () => {
 
   if (loading || !child) {
     return (
-      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <SafeAreaView
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
         <ActivityIndicator size="large" color="#9333EA" />
       </SafeAreaView>
     );
@@ -215,10 +236,13 @@ const toggleSensitiveData = async () => {
   const colorScheme = getColorScheme(child.gender);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5ECFE' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F5ECFE" }}>
       <ScrollView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
             <ArrowLeft color="#444" size={20} />
           </TouchableOpacity>
           <Text style={styles.headerText}></Text>
@@ -233,7 +257,9 @@ const toggleSensitiveData = async () => {
           </View>
           <Text style={styles.name}>{child.name}</Text>
           <Text style={styles.age}>Age {child.age}</Text>
-          <Text style={[styles.group, { color: colorScheme.accent }]}>{child.group_name}</Text>
+          <Text style={[styles.group, { color: colorScheme.accent }]}>
+            {child.group_name}
+          </Text>
         </View>
 
         <View style={styles.card}>
@@ -284,7 +310,9 @@ const toggleSensitiveData = async () => {
               onPress={handleSave}
               disabled={saving}
             >
-              <Text style={styles.saveText}>{saving ? 'Saving...' : 'Save'}</Text>
+              <Text style={styles.saveText}>
+                {saving ? "Saving..." : "Save"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -359,28 +387,28 @@ export default ChildPage;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5ECFE',
+    backgroundColor: "#F5ECFE",
     paddingHorizontal: 20,
     paddingTop: 50,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 20,
   },
   backButton: {
     padding: 10,
-    backgroundColor: '#EEE',
+    backgroundColor: "#EEE",
     borderRadius: 999,
   },
   headerText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   profileSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20,
   },
   avatarRing: {
@@ -390,29 +418,29 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   avatar: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: "#E5E7EB",
     width: 80,
     height: 80,
     borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   name: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#222',
+    fontWeight: "700",
+    color: "#222",
   },
   age: {
-    color: '#666',
+    color: "#666",
     marginVertical: 2,
   },
   group: {
-    fontWeight: '600',
+    fontWeight: "600",
   },
   card: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#FFF',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#FFF",
     padding: 12,
     borderRadius: 12,
     marginBottom: 12,
@@ -422,66 +450,66 @@ const styles = StyleSheet.create({
   },
   cardLabel: {
     fontSize: 12,
-    color: '#888',
+    color: "#888",
   },
   cardValue: {
     fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
+    color: "#333",
+    fontWeight: "500",
   },
   notesCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     padding: 16,
     borderRadius: 16,
     marginTop: 10,
   },
   notesTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
   },
   notesInput: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
     padding: 10,
     borderRadius: 10,
     minHeight: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   notesButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginTop: 10,
     gap: 10,
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#EEE',
+    backgroundColor: "#EEE",
     paddingVertical: 10,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   cancelText: {
-    color: '#333',
-    fontWeight: '500',
+    color: "#333",
+    fontWeight: "500",
   },
   saveButton: {
     flex: 1,
-    backgroundColor: '#9333EA',
+    backgroundColor: "#9333EA",
     paddingVertical: 10,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   saveText: {
-    color: '#FFF',
-    fontWeight: '600',
+    color: "#FFF",
+    fontWeight: "600",
   },
   viewMoreButton: {
-    flexDirection: 'row',
-    backgroundColor: '#DB2777',
+    flexDirection: "row",
+    backgroundColor: "#DB2777",
     padding: 14,
     marginTop: 20,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
   },
   viewMoreText: {
@@ -561,8 +589,8 @@ const styles = StyleSheet.create({
   },
   footerNote: {
     fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     marginTop: 10,
     marginBottom: 30,
   },

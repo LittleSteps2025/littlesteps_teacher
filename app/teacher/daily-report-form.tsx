@@ -37,7 +37,8 @@ import {
   QrCode,
   X,
 } from "lucide-react-native";
-import { auth } from "../../config/firebase";
+import { auth } from "../../config/firebase"; // your firebase config
+import { sendParentNotification } from "../../fcm";
 
 interface ReportField {
   id: string;
@@ -384,6 +385,28 @@ export default function DailyReportForm() {
       if (response.ok) {
         Alert.alert("Progress Saved", "Report submitted");
         setIsSubmitted(true);
+
+        // Send FCM notification to parent about child checkout
+        try {
+          const teacherName = user.displayName || user.email || "Teacher";
+          const success = await sendParentNotification(
+            child_id,
+            childName || "Child",
+            teacherName,
+            "checkout",
+            checkoutPerson,
+            checkoutTime
+          );
+          if (success) {
+            console.log("✅ Checkout notification sent to parent");
+          } else {
+            console.warn("⚠️ Failed to send checkout notification");
+          }
+        } catch (fcmError) {
+          console.warn("⚠️ FCM notification failed:", fcmError);
+          // Don't show error to user as report was submitted successfully
+        }
+
         router.back();
       } else {
         const errorData = await response.json();
@@ -391,10 +414,13 @@ export default function DailyReportForm() {
       }
     } catch (error) {
       console.error("Submit error:", error);
+
       let errorMessage = "Failed to submit report.";
+
       if (error instanceof Error) {
         errorMessage = error.message;
       }
+
       Alert.alert("Error", errorMessage);
     }
   };
