@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,13 +6,64 @@ import {
   StatusBar,
   SafeAreaView,
   StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Bell, Megaphone } from "lucide-react-native";
+import { API_BASE_URL } from "../../utility/config";
+import { auth } from "../../config/firebase";
 
 export default function Announcements() {
   const router = useRouter();
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          console.log("User not found");
+          Alert.alert("Error", "You must be logged in to view announcements.");
+          return;
+        }
+
+        // get Firebase ID token
+        const idToken = await user.getIdToken();
+
+        // send request with Authorization header
+        const response = await fetch(`${API_BASE_URL}/api/announcements`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          console.error("Failed to fetch announcements:", response.status);
+          return;
+        }
+
+        const data = await response.json();
+        console.log("Announcements data received:", data);
+        console.log(
+          "Number of announcements:",
+          Array.isArray(data.data) ? data.data.length : "Not an array"
+        );
+        setAnnouncements(data.data || []);
+      } catch (error) {
+        console.error("Error fetching announcements:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnnouncements();
+  }, []);
 
   return (
     <LinearGradient
@@ -46,24 +97,71 @@ export default function Announcements() {
         </View>
 
         {/* Content */}
-        <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <Bell size={80} color="#a855f7" strokeWidth={1.5} />
-          </View>
-
-          <Text style={styles.mainText}>Stay Updated</Text>
-          <Text style={styles.subText}>
-            Get the latest news, updates, and important announcements about your
-            child's activities and school events.
-          </Text>
-
-          <TouchableOpacity style={styles.notificationButton}>
-            <Megaphone size={20} color="white" strokeWidth={2} />
-            <Text style={styles.notificationButtonText}>
-              Enable Notifications
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#a855f7" />
+              <Text style={styles.loadingText}>Loading announcements...</Text>
+            </View>
+          ) : (
+            <View style={styles.announcementsContainer}>
+              {Array.isArray(announcements) && announcements.length > 0 ? (
+                announcements.map((announcement, index) => (
+                  <View
+                    key={announcement.ann_id || index}
+                    style={styles.announcementCard}
+                  >
+                    <View style={styles.announcementHeader}>
+                      <Megaphone size={20} color="#a855f7" />
+                      <Text style={styles.announcementTitle}>
+                        {announcement.title}
+                      </Text>
+                    </View>
+                    <Text style={styles.announcementContent}>
+                      {announcement.details}
+                    </Text>
+                    <View style={styles.announcementMeta}>
+                      <Text style={styles.announcementDate}>
+                        📅 {new Date(announcement.date).toLocaleDateString()} at{" "}
+                        {announcement.time}
+                      </Text>
+                      {announcement.author_name && (
+                        <Text style={styles.announcementAuthor}>
+                          👤 By {announcement.author_name}
+                        </Text>
+                      )}
+                    </View>
+                    {announcement.status && (
+                      <View style={styles.statusContainer}>
+                        <Text
+                          style={[
+                            styles.statusText,
+                            announcement.status === "draft"
+                              ? styles.statusDraft
+                              : styles.statusPublished,
+                          ]}
+                        >
+                          {announcement.status.toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyState}>
+                  <Bell size={64} color="#d1d5db" strokeWidth={1} />
+                  <Text style={styles.emptyTitle}>No Announcements</Text>
+                  <Text style={styles.emptyDescription}>
+                    There are no announcements available at the moment.
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+        </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -105,49 +203,103 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   content: {
-    flex: 1,
     paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  loadingContainer: {
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
+    paddingVertical: 60,
   },
-  iconContainer: {
-    marginBottom: 32,
-  },
-  mainText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#374151",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  subText: {
+  loadingText: {
+    marginTop: 12,
     fontSize: 16,
-    color: "#6b7280",
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 40,
-    paddingHorizontal: 20,
+    color: "#6B7280",
+    fontWeight: "500",
   },
-  notificationButton: {
-    flexDirection: "row",
-    backgroundColor: "#a855f7",
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 25,
-    alignItems: "center",
-    shadowColor: "#a855f7",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
+  announcementsContainer: {
+    paddingTop: 20,
+  },
+  announcementCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: "rgba(139, 92, 246, 0.1)",
   },
-  notificationButtonText: {
-    color: "white",
+  announcementHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  announcementTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginLeft: 12,
+  },
+  announcementContent: {
     fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
+    color: "#374151",
+    lineHeight: 24,
+    marginBottom: 12,
+  },
+  announcementDate: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  announcementMeta: {
+    marginTop: 8,
+  },
+  announcementAuthor: {
+    fontSize: 12,
+    color: "#8B5CF6",
+    fontWeight: "500",
+    marginTop: 4,
+  },
+  statusContainer: {
+    marginTop: 12,
+    alignSelf: "flex-start",
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: "700",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    textAlign: "center",
+  },
+  statusDraft: {
+    backgroundColor: "#FEF3C7",
+    color: "#D97706",
+  },
+  statusPublished: {
+    backgroundColor: "#D1FAE5",
+    color: "#059669",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#374151",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyDescription: {
+    fontSize: 16,
+    color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 24,
+    paddingHorizontal: 20,
   },
 });
