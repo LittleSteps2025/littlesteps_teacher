@@ -11,17 +11,13 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { ArrowLeft, Phone, Calendar, MapPin, User, Eye } from 'lucide-react-native';
+import { ArrowLeft, Phone, Calendar, MapPin, User, Eye, EyeOff } from 'lucide-react-native';
 import axios from 'axios';
 import { API_BASE_URL } from '../../utility/config';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-  import { auth } from '../../config/firebase'; // adjust import path
+import { auth } from '../../config/firebase';
 import { getIdToken } from 'firebase/auth';
-
-
-
-
 
 interface EmergencyContact {
   name: string;
@@ -49,6 +45,7 @@ const ChildPage: React.FC = () => {
   const [emergencyNotes, setEmergencyNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showSensitiveData, setShowSensitiveData] = useState(false);
 
   const getColorScheme = (gender: string) => {
     switch (gender) {
@@ -72,108 +69,102 @@ const ChildPage: React.FC = () => {
       setLoading(false);
     }
   };
-useEffect(() => {
-  if (childId) {
-    fetchChild();
-  }
-}, [childId]);
-
-useEffect(() => {
-  const user = auth.currentUser;
-  if (user) {
-    console.log('Current user at mount:', user.uid);
-  } else {
-    console.log('No current user at mount');
-  }
-}, []);
 
   useEffect(() => {
-  const unsubscribe = auth.onAuthStateChanged((user) => {
+    if (childId) {
+      fetchChild();
+    }
+  }, [childId]);
+
+  useEffect(() => {
+    const user = auth.currentUser;
     if (user) {
-      console.log('User signed in:', user.uid);
+      console.log('Current user at mount:', user.uid);
     } else {
-      console.log('User not signed in');
+      console.log('No current user at mount');
     }
-  });
+  }, []);
 
-  return unsubscribe; // Cleanup on unmount
-}, []);
-
-
-
-
-
-
-
-
-
-const handleSave = async () => {
-  console.log('asa');
-  if (!child) {
-    console.log('No child found, returning');
-    return;
-  }
-
-  console.log('Child exists:', child.child_id);
-
-  const user = auth.currentUser;
-  if (!user) {
-    console.log('No user found');
-    Alert.alert('Error', 'User not authenticated');
-    return;
-  }
-  console.log('User found:', user.uid);
-
-  setSaving(true);
-  console.log('Saving set to true');
-
-  try {
-    let token;
-    try {
-      token = await getIdToken(user);
-      console.log('Firebase Token:', token);
-      Alert.alert('handleSave called');
-    } catch (tokenError) {
-      console.error('Error getting token:', tokenError);
-      Alert.alert('Error', 'Failed to get auth token.');
-      setSaving(false);
-      return;  // stop further execution
-    }
-
-    console.log('Child IDdddddd');
-
-    await axios.post(
-      `${API_BASE_URL}/api/child/${child.child_id}/notes`,
-      { emergency_notes: emergencyNotes },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        console.log('User signed in:', user.uid);
+      } else {
+        console.log('User not signed in');
       }
-    );
-    console.log('aaaaaaaaaa:');
-    Alert.alert('Success', 'Emergency notes updated successfully.');
-    setChild({ ...child, emergency_notes: emergencyNotes });
-  } catch (error) {
-    console.error('Error saving emergency note:', error);
-    Alert.alert('Error', 'Failed to update emergency notes.');
-  } finally {
-    setSaving(false);
-    console.log('Saving set to false');
-  }
-};
+    });
 
+    return unsubscribe;
+  }, []);
 
+  const handleSave = async () => {
+    console.log('asa');
+    if (!child) {
+      console.log('No child found, returning');
+      return;
+    }
 
+    console.log('Child exists:', child.child_id);
 
+    const user = auth.currentUser;
+    if (!user) {
+      console.log('No user found');
+      Alert.alert('Error', 'User not authenticated');
+      return;
+    }
+    console.log('User found:', user.uid);
 
+    setSaving(true);
+    console.log('Saving set to true');
 
+    try {
+      let token;
+      try {
+        token = await getIdToken(user);
+        console.log('Firebase Token:', token);
+        Alert.alert('handleSave called');
+      } catch (tokenError) {
+        console.error('Error getting token:', tokenError);
+        Alert.alert('Error', 'Failed to get auth token.');
+        setSaving(false);
+        return;
+      }
 
+      console.log('Child IDdddddd');
 
-
+      await axios.post(
+        `${API_BASE_URL}/api/child/${child.child_id}/notes`,
+        { emergency_notes: emergencyNotes },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log('aaaaaaaaaa:');
+      Alert.alert('Success', 'Emergency notes updated successfully.');
+      setChild({ ...child, emergency_notes: emergencyNotes });
+    } catch (error) {
+      console.error('Error saving emergency note:', error);
+      Alert.alert('Error', 'Failed to update emergency notes.');
+    } finally {
+      setSaving(false);
+      console.log('Saving set to false');
+    }
+  };
 
   const handleCallContact = () => {
     Linking.openURL(`tel:${child?.parent_phone}`);
+  };
+
+  const handleCallEmergencyContact = () => {
+    if (child?.emergency_contact?.phone) {
+      Linking.openURL(`tel:${child.emergency_contact.phone}`);
+    }
+  };
+
+  const toggleSensitiveData = () => {
+    setShowSensitiveData(!showSensitiveData);
   };
 
   if (loading || !child) {
@@ -261,13 +252,77 @@ const handleSave = async () => {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.viewMoreButton}>
-          <Eye color="#fff" size={18} />
-          <Text style={styles.viewMoreText}>View More Details</Text>
+        <TouchableOpacity 
+          style={styles.viewMoreButton}
+          onPress={toggleSensitiveData}
+        >
+          {showSensitiveData ? (
+            <EyeOff color="#fff" size={18} />
+          ) : (
+            <Eye color="#fff" size={18} />
+          )}
+          <Text style={styles.viewMoreText}>
+            {showSensitiveData ? 'Hide Sensitive Details' : 'View More Details'}
+          </Text>
         </TouchableOpacity>
 
+        {showSensitiveData && (
+          <View style={styles.sensitiveDataContainer}>
+            <View style={styles.warningBanner}>
+              <Text style={styles.warningText}>⚠️ Sensitive Information</Text>
+              <Text style={styles.warningSubtext}>
+                Parent will be notified of this access
+              </Text>
+            </View>
+
+            {child.emergency_contact && (
+              <View style={styles.emergencyContactCard}>
+                <Text style={styles.sectionTitle}>Emergency Contact</Text>
+                
+                <View style={styles.detailRow}>
+                  <User color="#9333EA" size={16} />
+                  <View style={styles.detailContent}>
+                    <Text style={styles.detailLabel}>Name</Text>
+                    <Text style={styles.detailValue}>{child.emergency_contact.name}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <User color="#9333EA" size={16} />
+                  <View style={styles.detailContent}>
+                    <Text style={styles.detailLabel}>Relationship</Text>
+                    <Text style={styles.detailValue}>{child.emergency_contact.relationship}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <Phone color="#9333EA" size={16} />
+                  <View style={styles.detailContent}>
+                    <Text style={styles.detailLabel}>Phone Number</Text>
+                    <TouchableOpacity onPress={handleCallEmergencyContact}>
+                      <Text style={[styles.detailValue, styles.phoneLink]}>
+                        {child.emergency_contact.phone}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.additionalInfoCard}>
+              <Text style={styles.sectionTitle}>Additional Information</Text>
+              <Text style={styles.infoText}>
+                Gender: <Text style={styles.infoBold}>{child.gender}</Text>
+              </Text>
+              <Text style={styles.infoText}>
+                Child ID: <Text style={styles.infoBold}>{child.child_id}</Text>
+              </Text>
+            </View>
+          </View>
+        )}
+
         <Text style={styles.footerNote}>
-          This contains sensitive data. Once you click yes, parent will be notified.
+          This contains sensitive data. When you view details, parent will be notified.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -407,6 +462,77 @@ const styles = StyleSheet.create({
   viewMoreText: {
     color: '#FFF',
     fontWeight: '600',
+  },
+  sensitiveDataContainer: {
+    marginTop: 16,
+  },
+  warningBanner: {
+    backgroundColor: '#FEF3C7',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+  },
+  warningText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400E',
+    marginBottom: 4,
+  },
+  warningSubtext: {
+    fontSize: 12,
+    color: '#92400E',
+  },
+  emergencyContactCard: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  detailContent: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  phoneLink: {
+    color: '#9333EA',
+    textDecorationLine: 'underline',
+  },
+  additionalInfoCard: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  infoBold: {
+    fontWeight: '600',
+    color: '#333',
   },
   footerNote: {
     fontSize: 12,
