@@ -408,11 +408,19 @@ export default function ChildProfiles() {
                     >
                       <Image
                         source={
-                          child.profileImage
-                            ? { uri: child.profileImage }
+                          child.image && child.image.trim() !== ""
+                            ? { uri: child.image }
                             : require("../../../assets/images/default_profile.webp")
                         }
                         style={{ width: 60, height: 60, borderRadius: 30 }}
+                        onError={() => {
+                          // Fallback to default image if URL fails to load
+                          console.log(
+                            "Failed to load image for child:",
+                            child.id
+                          );
+                        }}
+                        resizeMode="cover"
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: 16 }}>
