@@ -10,18 +10,11 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
-} from "react-native";
-import {
-  ArrowLeft,
-  Phone,
-  Calendar,
-  MapPin,
-  User,
-  Eye,
-} from "lucide-react-native";
-import axios from "axios";
-import { API_BASE_URL } from "../../utility/config";
-import { useLocalSearchParams, useRouter } from "expo-router";
+} from 'react-native';
+import { ArrowLeft, Phone, Calendar, MapPin, User, Eye, EyeOff } from 'lucide-react-native';
+import axios from 'axios';
+import { API_BASE_URL } from '../../utility/config';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { auth } from "../../config/firebase"; // adjust import path
 import { getIdToken } from "firebase/auth";
@@ -55,6 +48,17 @@ const ChildPage: React.FC = () => {
   const [emergencyNotes, setEmergencyNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showSensitiveData, setShowSensitiveData] = useState(false);
+
+const [bloodType, setBloodType] = useState('');
+const [allergies, setAllergies] = useState('');
+const [medicalReports, setMedicalReports] = useState([]);
+const [loadingSensitive, setLoadingSensitive] = useState(false);
+
+
+
+
+
 
   const getColorScheme = (gender: string) => {
     switch (gender) {
@@ -104,17 +108,18 @@ const ChildPage: React.FC = () => {
       }
     });
 
-    return unsubscribe; // Cleanup on unmount
+    return unsubscribe;
   }, []);
 
+
   const handleSave = async () => {
-    console.log("asa");
+    console.log('asa');
     if (!child) {
-      console.log("No child found, returning");
+      console.log('No child found, returning');
       return;
     }
 
-    console.log("Child exists:", child.child_id);
+    console.log('Child exists:', child.child_id);
 
     const user = auth.currentUser;
     if (!user) {
@@ -123,9 +128,18 @@ const ChildPage: React.FC = () => {
       return;
     }
     console.log("User found:", user.uid);
+    // const user = auth.currentUser;
+    if (!user) {
+      console.log('No user found');
+      Alert.alert('Error', 'User not authenticated');
+      return;
+    }
+    console.log('User found:', user.uid);
 
     setSaving(true);
     console.log("Saving set to true");
+    setSaving(true);
+    console.log('Saving set to true');
 
     try {
       let token;
@@ -143,7 +157,7 @@ const ChildPage: React.FC = () => {
       console.log("Child IDdddddd");
 
       await axios.post(
-        `${API_BASE_URL}/api/teachers/child/${child.child_id}/notes`,
+        `${API_BASE_URL}/api/child/${child.child_id}/notes`,
         { emergency_notes: emergencyNotes },
         {
           headers: {
@@ -151,15 +165,15 @@ const ChildPage: React.FC = () => {
           },
         }
       );
-      console.log("aaaaaaaaaa:");
-      Alert.alert("Success", "Emergency notes updated successfully.");
+      console.log('aaaaaaaaaa:');
+      Alert.alert('Success', 'Emergency notes updated successfully.');
       setChild({ ...child, emergency_notes: emergencyNotes });
     } catch (error) {
-      console.error("Error saving emergency note:", error);
-      Alert.alert("Error", "Failed to update emergency notes.");
+      console.error('Error saving emergency note:', error);
+      Alert.alert('Error', 'Failed to update emergency notes.');
     } finally {
       setSaving(false);
-      console.log("Saving set to false");
+      console.log('Saving set to false');
     }
   };
 
@@ -167,50 +181,45 @@ const ChildPage: React.FC = () => {
     Linking.openURL(`tel:${child?.parent_phone}`);
   };
 
-  const handleViewSensitiveData = async () => {
-    Alert.alert(
-      "Access Sensitive Information",
-      "Are you sure you want to view details?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Yes",
-          onPress: async () => {
-            // Send FCM notification to parent
-            try {
-              const teacherName = user?.fullName || "Teacher";
-              const success = await sendParentNotification(
-                child!.child_id,
-                child!.name,
-                teacherName
-              );
-
-              if (success) {
-                Alert.alert(
-                  "Parent Notified",
-                  "The parent has been notified that sensitive information was accessed.",
-                  [{ text: "OK" }]
-                );
-              } else {
-                Alert.alert(
-                  "Notification Failed",
-                  "Failed to notify parent. Please try again.",
-                  [{ text: "OK" }]
-                );
-              }
-            } catch (notificationError) {
-              console.error("Error sending notification:", notificationError);
-              Alert.alert(
-                "Notification Failed",
-                "Failed to notify parent. Please try again.",
-                [{ text: "OK" }]
-              );
-            }
-          },
-        },
-      ]
-    );
+  const handleCallEmergencyContact = () => {
+    if (child?.emergency_contact?.phone) {
+      Linking.openURL(`tel:${child.emergency_contact.phone}`);
+    }
   };
+
+
+const fetchSensitiveData = async () => {
+  if (!childId) return;
+  setLoadingSensitive(true);
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/child/${childId}/sensitive`);
+    const data = response.data;
+    console.log("Sensitive Data:", response.data);
+
+    setBloodType(data.blood_type || '');
+    setAllergies(data.allergies || '');
+    setMedicalReports(data.medical_records || []);
+  } catch (error) {
+    console.error('Error fetching sensitive data:', error);
+    Alert.alert('Error', 'Failed to load sensitive data.');
+  } finally {
+    setLoadingSensitive(false);
+  }
+  
+};
+
+
+
+
+
+
+const toggleSensitiveData = async () => {
+  if (!showSensitiveData) {
+    await fetchSensitiveData();
+  }
+  setShowSensitiveData(!showSensitiveData);
+};
+
 
   if (loading || !child) {
     return (
@@ -306,24 +315,73 @@ const ChildPage: React.FC = () => {
           </View>
         </View>
 
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.viewMoreButton}
-          onPress={handleViewSensitiveData}
+          onPress={toggleSensitiveData}
         >
-          <Eye color="#fff" size={18} />
-          <Text style={styles.viewMoreText}>View More Details</Text>
+          {showSensitiveData ? (
+            <EyeOff color="#fff" size={18} />
+          ) : (
+            <Eye color="#fff" size={18} />
+          )}
+          <Text style={styles.viewMoreText}>
+            {showSensitiveData ? 'Hide Sensitive Details' : 'View More Details'}
+          </Text>
         </TouchableOpacity>
 
+       {showSensitiveData && (
+  <View style={styles.sensitiveDataContainer}>
+    <View style={styles.warningBanner}>
+      <Text style={styles.warningText}>⚠️ Sensitive Information</Text>
+      <Text style={styles.warningSubtext}>Parent will be notified of this access</Text>
+    </View>
+
+    {loadingSensitive ? (
+      <ActivityIndicator size="large" color="#9333EA" />
+    ) : (
+      <>
+        {/* 🩸 Blood Type & Allergies */}
+        <View style={styles.additionalInfoCard}>
+          <Text style={styles.sectionTitle}>Health Details</Text>
+          <Text style={styles.infoText}>
+            Blood Type: <Text style={styles.infoBold}>{bloodType || 'N/A'}</Text>
+          </Text>
+          <Text style={styles.infoText}>
+            Allergies: <Text style={styles.infoBold}>{allergies || 'None'}</Text>
+          </Text>
+        </View>
+
+        {/* 🏥 Medical Reports */}
+        <View style={styles.additionalInfoCard}>
+          
+          <Text style={styles.sectionTitle}>Medical Reports</Text>
+          {medicalReports.length > 0 ? (
+            medicalReports.map((report, index) => (
+              <View key={index} style={styles.documentCard}>
+                <Text style={styles.detailLabel}>{report.type}</Text>
+                <Text style={styles.detailValue}>{report.title}</Text>
+                <Text style={{ color: '#666', marginTop: 4 }}>{report.description}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.infoText}>No medical reports found.</Text>
+          )}
+        </View>
+      </>
+    )}
+  </View>
+)}
+
+
         <Text style={styles.footerNote}>
-          This contains sensitive data. Once you click yes, parent will be
-          notified.
+          This contains sensitive data. When you view details, parent will be notified.
         </Text>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-export default ChildPage;
+
 
 const styles = StyleSheet.create({
   container: {
@@ -454,8 +512,80 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   viewMoreText: {
-    color: "#FFF",
-    fontWeight: "600",
+    color: '#FFF',
+    fontWeight: '600',
+  },
+  sensitiveDataContainer: {
+    marginTop: 16,
+  },
+  warningBanner: {
+    backgroundColor: '#FEF3C7',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+  },
+  warningText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400E',
+    marginBottom: 4,
+  },
+  warningSubtext: {
+    fontSize: 12,
+    color: '#92400E',
+  },
+  emergencyContactCard: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  detailContent: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 17,
+    color: '#888',
+    marginBottom: 2,
+    fontWeight: '600',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+  },
+  phoneLink: {
+    color: '#9333EA',
+    textDecorationLine: 'underline',
+  },
+  additionalInfoCard: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  infoBold: {
+    fontWeight: '600',
+    color: '#333',
   },
   footerNote: {
     fontSize: 12,
@@ -464,4 +594,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 30,
   },
-});
+})
+
+  export default ChildPage;
