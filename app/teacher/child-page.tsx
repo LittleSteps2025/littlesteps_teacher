@@ -47,6 +47,16 @@ const ChildPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [showSensitiveData, setShowSensitiveData] = useState(false);
 
+const [bloodType, setBloodType] = useState('');
+const [allergies, setAllergies] = useState('');
+const [medicalReports, setMedicalReports] = useState([]);
+const [loadingSensitive, setLoadingSensitive] = useState(false);
+
+
+
+
+
+
   const getColorScheme = (gender: string) => {
     switch (gender) {
       case 'female':
@@ -163,9 +173,36 @@ const ChildPage: React.FC = () => {
     }
   };
 
-  const toggleSensitiveData = () => {
-    setShowSensitiveData(!showSensitiveData);
-  };
+
+const fetchSensitiveData = async () => {
+  if (!childId) return;
+  setLoadingSensitive(true);
+  try {
+    const response = await axios.get(`${API_BASE_URL}/api/child/${childId}/sensitive`);
+    const data = response.data;
+    setBloodType(data.blood_type || '');
+    setAllergies(data.allergies || '');
+    setMedicalReports(data.medical_records || []);
+  } catch (error) {
+    console.error('Error fetching sensitive data:', error);
+    Alert.alert('Error', 'Failed to load sensitive data.');
+  } finally {
+    setLoadingSensitive(false);
+  }
+};
+
+
+
+
+
+
+const toggleSensitiveData = async () => {
+  if (!showSensitiveData) {
+    await fetchSensitiveData();
+  }
+  setShowSensitiveData(!showSensitiveData);
+};
+
 
   if (loading || !child) {
     return (
@@ -266,60 +303,48 @@ const ChildPage: React.FC = () => {
           </Text>
         </TouchableOpacity>
 
-        {showSensitiveData && (
-          <View style={styles.sensitiveDataContainer}>
-            <View style={styles.warningBanner}>
-              <Text style={styles.warningText}>⚠️ Sensitive Information</Text>
-              <Text style={styles.warningSubtext}>
-                Parent will be notified of this access
-              </Text>
-            </View>
+       {showSensitiveData && (
+  <View style={styles.sensitiveDataContainer}>
+    <View style={styles.warningBanner}>
+      <Text style={styles.warningText}>⚠️ Sensitive Information</Text>
+      <Text style={styles.warningSubtext}>Parent will be notified of this access</Text>
+    </View>
 
-            {child.emergency_contact && (
-              <View style={styles.emergencyContactCard}>
-                <Text style={styles.sectionTitle}>Emergency Contact</Text>
-                
-                <View style={styles.detailRow}>
-                  <User color="#9333EA" size={16} />
-                  <View style={styles.detailContent}>
-                    <Text style={styles.detailLabel}>Name</Text>
-                    <Text style={styles.detailValue}>{child.emergency_contact.name}</Text>
-                  </View>
-                </View>
+    {loadingSensitive ? (
+      <ActivityIndicator size="large" color="#9333EA" />
+    ) : (
+      <>
+        {/* 🩸 Blood Type & Allergies */}
+        <View style={styles.additionalInfoCard}>
+          <Text style={styles.sectionTitle}>Health Details</Text>
+          <Text style={styles.infoText}>
+            Blood Type: <Text style={styles.infoBold}>{bloodType || 'N/A'}</Text>
+          </Text>
+          <Text style={styles.infoText}>
+            Allergies: <Text style={styles.infoBold}>{allergies || 'None'}</Text>
+          </Text>
+        </View>
 
-                <View style={styles.detailRow}>
-                  <User color="#9333EA" size={16} />
-                  <View style={styles.detailContent}>
-                    <Text style={styles.detailLabel}>Relationship</Text>
-                    <Text style={styles.detailValue}>{child.emergency_contact.relationship}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Phone color="#9333EA" size={16} />
-                  <View style={styles.detailContent}>
-                    <Text style={styles.detailLabel}>Phone Number</Text>
-                    <TouchableOpacity onPress={handleCallEmergencyContact}>
-                      <Text style={[styles.detailValue, styles.phoneLink]}>
-                        {child.emergency_contact.phone}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+        {/* 🏥 Medical Reports */}
+        <View style={styles.additionalInfoCard}>
+          <Text style={styles.sectionTitle}>Medical Reports</Text>
+          {medicalReports.length > 0 ? (
+            medicalReports.map((report, index) => (
+              <View key={index} style={styles.documentCard}>
+                <Text style={styles.detailLabel}>{report.type}</Text>
+                <Text style={styles.detailValue}>{report.title}</Text>
+                <Text style={{ color: '#666', marginTop: 4 }}>{report.description}</Text>
               </View>
-            )}
+            ))
+          ) : (
+            <Text style={styles.infoText}>No medical reports found.</Text>
+          )}
+        </View>
+      </>
+    )}
+  </View>
+)}
 
-            <View style={styles.additionalInfoCard}>
-              <Text style={styles.sectionTitle}>Additional Information</Text>
-              <Text style={styles.infoText}>
-                Gender: <Text style={styles.infoBold}>{child.gender}</Text>
-              </Text>
-              <Text style={styles.infoText}>
-                Child ID: <Text style={styles.infoBold}>{child.child_id}</Text>
-              </Text>
-            </View>
-          </View>
-        )}
 
         <Text style={styles.footerNote}>
           This contains sensitive data. When you view details, parent will be notified.
