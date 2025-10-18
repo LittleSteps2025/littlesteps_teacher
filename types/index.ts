@@ -27,3 +27,12 @@ export interface Alert {
   date: string;
   isRead: boolean;
 }
+
+export interface Child {
+  child_id: string;
+  child_name: string;
+  child_age: number;
+  group_name: string;
+  report_id: string;
+  avatar?: string;
+}

@@ -15,9 +15,10 @@ import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../utility/config";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { auth } from '../../config/firebase';
+import { Child } from '../../types';
 
 export default function Children() {
-  const [children, setChildren] = useState([]);
+  const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -141,16 +142,15 @@ export default function Children() {
                   ]}>
                     <View style={styles.childHeader}>
                       <View style={styles.avatarContainer}>
-                        <Image
+                        {/* <Image
                           source={{
                             uri: child.avatar || "https://via.placeholder.com/60",
                           }}
                           style={styles.avatar}
-                        />
-                        <View style={styles.onlineIndicator} />
+                        /> */}
                       </View>
                       <View style={styles.childInfo}>
-                        <Text style={styles.childName}>{child.child_name}</Text>
+                        <Text style={styles.childName}>{child.child_name} (ID: S {child.child_id})</Text>
                         <Text style={styles.childDetails}>
                           {child.child_age} years • {child.group_name} Group
                         </Text>
