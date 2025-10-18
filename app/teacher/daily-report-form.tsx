@@ -179,6 +179,12 @@ export default function DailyReportForm() {
         setCheckoutTime(report.checkout_time || "");
         setArrivalTime(formattedArrivalTime);
         setArrivalCompleted(!!report.arrived_time);
+
+        // Check if report is already submitted
+        if (report.is_submitted || report.status === "submitted") {
+          setIsSubmitted(true);
+          console.log("Report is already submitted - enabling read-only mode");
+        }
       } catch (err) {
         console.error("Failed to fetch report:", err);
       } finally {
@@ -200,6 +206,15 @@ export default function DailyReportForm() {
   };
 
   const toggleComplete = (id: string) => {
+    // Prevent changes if report is already submitted
+    if (isSubmitted) {
+      Alert.alert(
+        "Report Already Submitted",
+        "This report has been submitted and cannot be modified."
+      );
+      return;
+    }
+
     setReportFields((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, completed: !item.completed } : item
@@ -264,10 +279,10 @@ export default function DailyReportForm() {
   // Handle QR Code Scanning
   const handleBarCodeScanned = ({ data }: { data: string }) => {
     setShowQRScanner(false); // Close the scanner first
-    
+
     // Trim whitespace from scanned data
     const scannedName = data.trim();
-    
+
     // Check if a pickup person is selected
     if (!checkoutPerson) {
       Alert.alert(
@@ -276,7 +291,7 @@ export default function DailyReportForm() {
       );
       return;
     }
-    
+
     // Compare scanned name with selected pickup person (case-insensitive)
     if (scannedName.toLowerCase() === checkoutPerson.toLowerCase()) {
       Alert.alert(
@@ -288,17 +303,17 @@ export default function DailyReportForm() {
       setScannedData({ name: scannedName, relationship: "Guardian" });
     } else {
       Alert.alert(
-        "❌ Verification Failed", 
+        "❌ Verification Failed",
         `Scanned Name: ${scannedName}\nSelected Person: ${checkoutPerson}\n\nThe scanned QR code name does not match the selected pickup person.`,
         [
-          { 
-            text: "Try Again", 
-            onPress: () => setShowQRScanner(true) // Reopen scanner
+          {
+            text: "Try Again",
+            onPress: () => setShowQRScanner(true), // Reopen scanner
           },
-          { 
-            text: "Cancel", 
-            style: "cancel" 
-          }
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
         ]
       );
     }
@@ -425,6 +440,177 @@ export default function DailyReportForm() {
     }
   };
 
+  const handleSaveProgress = async () => {
+    // Prevent saving if report is already submitted
+    if (isSubmitted) {
+      Alert.alert(
+        "Report Already Submitted",
+        "This report has been submitted and cannot be modified."
+      );
+      return;
+    }
+
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert("Error", "You must be logged in to save progress.");
+        return;
+      }
+
+      const idToken = await user.getIdToken();
+
+      // Build the status fields object that matches your server model
+      const statusFields = {
+        // Status fields (server adds _status suffix automatically)
+        breakfirst: reportFields.find((f) => f.id === "breakfirst")?.completed
+          ? 1
+          : 0,
+        morning_snack: reportFields.find((f) => f.id === "morning_snack")
+          ?.completed
+          ? 1
+          : 0,
+        lunch: reportFields.find((f) => f.id === "lunch")?.completed ? 1 : 0,
+        evening_snack: reportFields.find((f) => f.id === "evening_snack")
+          ?.completed
+          ? 1
+          : 0,
+        medicine: reportFields.find((f) => f.id === "medicine")?.completed
+          ? 1
+          : 0,
+        // Special fields that don't get _status suffix (only these two are allowed)
+        day_summery: dailySummary || "",
+        progress: `${Math.round(progressPercentage)}`,
+      };
+
+      console.log("Save progress payload:", statusFields);
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/reports/child/${report_id}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify(statusFields),
+        }
+      );
+
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log("Save progress response:", responseData);
+        setLastSaved(new Date());
+        Alert.alert("Success", "Progress saved successfully!");
+      } else {
+        // Get the full error response
+        const responseText = await response.text();
+        console.log("Error response status:", response.status);
+        console.log("Error response text:", responseText);
+
+        let errorMessage = "Failed to save progress";
+
+        try {
+          const errorData = JSON.parse(responseText);
+          console.log("Parsed error data:", errorData);
+
+          // Extract specific error details
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+
+          // If there's a detailed error message, use it
+          if (
+            typeof errorData.error === "string" &&
+            errorData.error.length > 0
+          ) {
+            errorMessage = errorData.error;
+          }
+        } catch (parseError) {
+          console.log("Could not parse error response as JSON");
+          errorMessage = `Server error (${response.status}): ${responseText}`;
+        }
+
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      console.error("Save progress error:", error);
+
+      // If the full payload failed, try with just the essential status fields
+      if (
+        error instanceof Error &&
+        error.message.includes("Failed to update report")
+      ) {
+        console.log("Trying fallback with minimal payload...");
+
+        try {
+          const user = auth.currentUser;
+          if (!user) throw new Error("No user");
+
+          const idToken = await user.getIdToken();
+
+          // Minimal payload with just the status fields
+          const minimalPayload = {
+            breakfirst: reportFields.find((f) => f.id === "breakfirst")
+              ?.completed
+              ? 1
+              : 0,
+            morning_snack: reportFields.find((f) => f.id === "morning_snack")
+              ?.completed
+              ? 1
+              : 0,
+            lunch: reportFields.find((f) => f.id === "lunch")?.completed
+              ? 1
+              : 0,
+            evening_snack: reportFields.find((f) => f.id === "evening_snack")
+              ?.completed
+              ? 1
+              : 0,
+            medicine: reportFields.find((f) => f.id === "medicine")?.completed
+              ? 1
+              : 0,
+          };
+
+          console.log("Minimal payload:", minimalPayload);
+
+          const fallbackResponse = await fetch(
+            `${API_BASE_URL}/api/reports/child/${report_id}/status`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${idToken}`,
+              },
+              body: JSON.stringify(minimalPayload),
+            }
+          );
+
+          if (fallbackResponse.ok) {
+            setLastSaved(new Date());
+            Alert.alert(
+              "Success",
+              "Basic progress saved! (Some details may not be saved)"
+            );
+            return;
+          } else {
+            const fallbackErrorText = await fallbackResponse.text();
+            console.log("Fallback error:", fallbackErrorText);
+          }
+        } catch (fallbackError) {
+          console.log("Fallback save also failed:", fallbackError);
+        }
+      }
+
+      let errorMessage = "Failed to save progress.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert("Save Progress Error", errorMessage);
+    }
+  };
+
   const validateForm = () => {
     const incompleteRequired = reportFields.filter(
       (field) => field.required && !field.completed
@@ -489,6 +675,15 @@ export default function DailyReportForm() {
               </View>
             </View>
           </View>
+
+          {/* Read-Only Indicator */}
+          {isSubmitted && (
+            <View style={styles.readOnlyBanner}>
+              <Text style={styles.readOnlyText}>
+                📋 Report Submitted - Read Only Mode
+              </Text>
+            </View>
+          )}
         </LinearGradient>
 
         {/* Arrival Section */}
@@ -671,17 +866,19 @@ export default function DailyReportForm() {
                         {checkoutPerson}
                       </Text>
                     </View>
-                    
+
                     {/* QR Scan Button */}
-                    <TouchableOpacity
+                    {/* <TouchableOpacity
                       style={styles.scanButton}
                       onPress={() => setScanning(true)}
                       disabled={isSubmitted}
                     >
                       <View style={styles.scanButtonContent}>
-                        <Text style={styles.scanButtonText}>Scan QR Code to Verify</Text>
+                        <Text style={styles.scanButtonText}>
+                          Scan QR Code to Verify
+                        </Text>
                       </View>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                   </>
                 ) : null}
               </View>
@@ -789,6 +986,7 @@ export default function DailyReportForm() {
         <View style={styles.actionButtonsContainer}>
           <TouchableOpacity
             style={[styles.actionButton, styles.saveButton]}
+            onPress={handleSaveProgress}
             disabled={isSubmitted}
           >
             <Save color="#fff" size={16} />
@@ -810,16 +1008,26 @@ export default function DailyReportForm() {
           </TouchableOpacity>
         </View>
 
+        {/* Last Saved Indicator */}
+        {lastSaved && (
+          <View style={styles.lastSavedContainer}>
+            <Text style={styles.lastSavedText}>
+              Last saved: {lastSaved.toLocaleTimeString()}
+            </Text>
+          </View>
+        )}
+
         <View style={{ height: 20 }} />
       </ScrollView>
 
       {/* QR Scanner Modal */}
       <Modal
         visible={showQRScanner}
-        animationType="slide"
+        animationType="fade"
+        presentationStyle="fullScreen"
         onRequestClose={() => setShowQRScanner(false)}
       >
-        <View style={styles.qrScannerContainer}>
+        <View style={styles.qrScannerModal}>
           <View style={styles.qrScannerHeader}>
             <Text style={styles.qrScannerTitle}>
               Scan Pickup Person QR Code
@@ -842,23 +1050,22 @@ export default function DailyReportForm() {
             </Text>
           </View>
 
-       <View style={styles.cameraContainer}>
-  <CameraView
-    style={StyleSheet.absoluteFill}
-    facing="back"
-    onBarcodeScanned={handleBarCodeScanned}
-    barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-  />
-  
-  {/* Overlay frame */}
-  <View style={styles.qrFrame}>
-    <View style={styles.qrCornerTopLeft} />
-    <View style={styles.qrCornerTopRight} />
-    <View style={styles.qrCornerBottomLeft} />
-    <View style={styles.qrCornerBottomRight} />
-  </View>
-</View>
+          <View style={styles.cameraContainer}>
+            <CameraView
+              style={styles.cameraView}
+              facing="back"
+              onBarcodeScanned={handleBarCodeScanned}
+              barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+            />
 
+            {/* Overlay frame */}
+            <View style={styles.qrFrame}>
+              <View style={styles.qrCornerTopLeft} />
+              <View style={styles.qrCornerTopRight} />
+              <View style={styles.qrCornerBottomLeft} />
+              <View style={styles.qrCornerBottomRight} />
+            </View>
+          </View>
 
           <View style={styles.qrScannerFooter}>
             <Text style={styles.qrScannerFooterText}>
@@ -871,80 +1078,82 @@ export default function DailyReportForm() {
   );
 }
 
-
-
 const styles = StyleSheet.create({
-
   cameraContainer: {
-  flex: 1,
-  position: "relative",
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "#000",
-  overflow: "hidden",
-},
+    flex: 1,
+    position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000",
+    width: "100%",
+    minHeight: 300,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
 
-camera: {
-  ...StyleSheet.absoluteFillObject,
-},
+  cameraView: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
 
-qrFrame: {
-  width: 250,
-  height: 250,
-  borderWidth: 2,
-  borderColor: "rgba(255, 255, 255, 0.5)",
-  justifyContent: "center",
-  alignItems: "center",
-  position: "absolute",
-},
+  qrFrame: {
+    width: 250,
+    height: 250,
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "absolute",
+  },
 
-qrCornerTopLeft: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  width: 40,
-  height: 40,
-  borderTopWidth: 4,
-  borderLeftWidth: 4,
-  borderColor: "#fff",
-  borderRadius: 6,
-},
+  qrCornerTopLeft: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 40,
+    height: 40,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderColor: "#fff",
+    borderRadius: 6,
+  },
 
-qrCornerTopRight: {
-  position: "absolute",
-  top: 0,
-  right: 0,
-  width: 40,
-  height: 40,
-  borderTopWidth: 4,
-  borderRightWidth: 4,
-  borderColor: "#fff",
-  borderRadius: 6,
-},
+  qrCornerTopRight: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderColor: "#fff",
+    borderRadius: 6,
+  },
 
-qrCornerBottomLeft: {
-  position: "absolute",
-  bottom: 0,
-  left: 0,
-  width: 40,
-  height: 40,
-  borderBottomWidth: 4,
-  borderLeftWidth: 4,
-  borderColor: "#fff",
-  borderRadius: 6,
-},
+  qrCornerBottomLeft: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    width: 40,
+    height: 40,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderColor: "#fff",
+    borderRadius: 6,
+  },
 
-qrCornerBottomRight: {
-  position: "absolute",
-  bottom: 0,
-  right: 0,
-  width: 40,
-  height: 40,
-  borderBottomWidth: 4,
-  borderRightWidth: 4,
-  borderColor: "#fff",
-  borderRadius: 6,
-},
+  qrCornerBottomRight: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderColor: "#fff",
+    borderRadius: 6,
+  },
 
   qrScannerInfo: {
     backgroundColor: "#fff5f7", // gentle rose blush 💗
@@ -1033,6 +1242,13 @@ qrCornerBottomRight: {
     alignItems: "center",
     justifyContent: "center",
   },
+  qrScannerModal: {
+    flex: 1,
+    backgroundColor: "#000",
+    paddingTop: 50,
+    paddingHorizontal: 20,
+  },
+
   qrScannerContainer: {
     flex: 1,
     backgroundColor: "#fff5f7", // soft rosy background 🌸
@@ -1520,6 +1736,9 @@ qrCornerBottomRight: {
     borderWidth: 2,
     borderColor: "#fff",
     borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    position: "absolute",
   },
   qrGuideText: {
     color: "#fff",
@@ -1564,5 +1783,15 @@ qrCornerBottomRight: {
     color: "#fff",
     fontSize: 14,
     textAlign: "center",
+  },
+  lastSavedContainer: {
+    alignItems: "center",
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  lastSavedText: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontStyle: "italic",
   },
 });
