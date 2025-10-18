@@ -5,7 +5,7 @@ export interface Invoice {
   amount: number;
   dueDate: string;
   issueDate: string;
-  status: 'paid' | 'pending' | 'overdue' | 'draft';
+  status: "paid" | "pending" | "overdue" | "draft";
   description: string;
 }
 
@@ -14,14 +14,14 @@ export interface Payment {
   invoiceId: string;
   amount: number;
   date: string;
-  method: 'credit_card' | 'bank_transfer' | 'cash' | 'check';
-  status: 'completed' | 'processing' | 'failed';
+  method: "credit_card" | "bank_transfer" | "cash" | "check";
+  status: "completed" | "processing" | "failed";
   reference?: string;
 }
 
 export interface Alert {
   id: string;
-  type: 'overdue' | 'due_soon' | 'payment_received';
+  type: "overdue" | "due_soon" | "payment_received";
   invoiceId: string;
   message: string;
   date: string;

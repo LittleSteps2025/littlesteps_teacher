@@ -14,7 +14,7 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../../utility/config";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { auth } from '../../../config/firebase';
+import { auth } from "../../../config/firebase";
 
 export default function Children() {
   const [children, setChildren] = useState([]);
@@ -37,7 +37,7 @@ export default function Children() {
         const response = await fetch(`${API_BASE_URL}/api/reports`, {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${idToken}`,
+            Authorization: `Bearer ${idToken}`,
             "Content-Type": "application/json",
           },
         });
@@ -60,11 +60,11 @@ export default function Children() {
   }, []);
 
   const formatDate = () => {
-    return new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -104,7 +104,7 @@ export default function Children() {
             <View style={styles.actionButtons}>
               <TouchableOpacity
                 style={styles.showAllButton}
-                onPress={() => router.push('/teacher/all-reports')}
+                onPress={() => router.push("/teacher/all-reports")}
                 activeOpacity={0.8}
               >
                 <Clock size={14} color="#8B5CF6" strokeWidth={2} />
@@ -132,25 +132,31 @@ export default function Children() {
             <View style={styles.content}>
               {Array.isArray(children) && children.length > 0 ? (
                 children.map((child, index) => (
-                  <View key={child.child_id} style={[
-                    styles.childCard,
-                    { 
-                      marginTop: index === 0 ? 0 : 12,
-                      transform: [{ scale: 1 }] 
-                    }
-                  ]}>
+                  <View
+                    key={child.child_id}
+                    style={[
+                      styles.childCard,
+                      {
+                        marginTop: index === 0 ? 0 : 12,
+                        transform: [{ scale: 1 }],
+                      },
+                    ]}
+                  >
                     <View style={styles.childHeader}>
                       <View style={styles.avatarContainer}>
-                        <Image
+                        {/* <Image
                           source={{
                             uri: child.avatar || "https://via.placeholder.com/60",
                           }}
                           style={styles.avatar}
-                        />
-                        <View style={styles.onlineIndicator} />
+                        /> */}
+                        {/* <View style={styles.onlineIndicator} /> */}
                       </View>
                       <View style={styles.childInfo}>
                         <Text style={styles.childName}>{child.child_name}</Text>
+                        <Text style={styles.childId}>
+                          ID: S{child.child_id}
+                        </Text>
                         <Text style={styles.childDetails}>
                           {child.child_age} years • {child.group_name} Group
                         </Text>
@@ -184,7 +190,7 @@ export default function Children() {
                   </Text>
                   <TouchableOpacity
                     style={styles.emptyButton}
-                    onPress={() => router.push('/teacher/all-reports')}
+                    onPress={() => router.push("/teacher/all-reports")}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.emptyButtonText}>View All Reports</Text>
@@ -349,6 +355,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#1F2937",
+    marginBottom: 2,
+  },
+  childId: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#8B5CF6",
     marginBottom: 4,
   },
   childDetails: {
