@@ -428,6 +428,16 @@ export default function ChildProfiles() {
                       <Text
                         style={{
                           fontSize: 14,
+                          fontWeight: "600",
+                          color: "#8B5CF6",
+                          marginBottom: 4,
+                        }}
+                      >
+                        ID: S{child.id}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 14,
                           color: "#6b7280",
                           marginBottom: 8,
                         }}
@@ -462,7 +472,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 20,
   },
-backButton: {
+  backButton: {
     width: 44,
     height: 44,
     justifyContent: "center",
