@@ -111,12 +111,7 @@ const [loadingSensitive, setLoadingSensitive] = useState(false);
     return unsubscribe;
   }, []);
 
-  const handleSave = async () => {
-    console.log("asa");
-    if (!child) {
-      console.log("No child found, returning");
-      return;
-    }
+
   const handleSave = async () => {
     console.log('asa');
     if (!child) {
@@ -133,7 +128,7 @@ const [loadingSensitive, setLoadingSensitive] = useState(false);
       return;
     }
     console.log("User found:", user.uid);
-    const user = auth.currentUser;
+    // const user = auth.currentUser;
     if (!user) {
       console.log('No user found');
       Alert.alert('Error', 'User not authenticated');
@@ -199,6 +194,8 @@ const fetchSensitiveData = async () => {
   try {
     const response = await axios.get(`${API_BASE_URL}/api/child/${childId}/sensitive`);
     const data = response.data;
+    console.log("Sensitive Data:", response.data);
+
     setBloodType(data.blood_type || '');
     setAllergies(data.allergies || '');
     setMedicalReports(data.medical_records || []);
@@ -208,6 +205,7 @@ const fetchSensitiveData = async () => {
   } finally {
     setLoadingSensitive(false);
   }
+  
 };
 
 
@@ -355,6 +353,7 @@ const toggleSensitiveData = async () => {
 
         {/* 🏥 Medical Reports */}
         <View style={styles.additionalInfoCard}>
+          
           <Text style={styles.sectionTitle}>Medical Reports</Text>
           {medicalReports.length > 0 ? (
             medicalReports.map((report, index) => (
@@ -382,7 +381,7 @@ const toggleSensitiveData = async () => {
   );
 };
 
-export default ChildPage;
+
 
 const styles = StyleSheet.create({
   container: {
@@ -559,14 +558,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   detailLabel: {
-    fontSize: 12,
+    fontSize: 17,
     color: '#888',
     marginBottom: 2,
+    fontWeight: '600',
   },
   detailValue: {
     fontSize: 14,
     color: '#333',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   phoneLink: {
     color: '#9333EA',
@@ -594,4 +594,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 30,
   },
-});
+})
+
+  export default ChildPage;
