@@ -52,9 +52,9 @@ export default function Announcements() {
         console.log("Announcements data received:", data);
         console.log(
           "Number of announcements:",
-          Array.isArray(data.data) ? data.data.length : "Not an array"
+          Array.isArray(data) ? data.length : "Not an array"
         );
-        setAnnouncements(data.data || []);
+        setAnnouncements(data || []);
       } catch (error) {
         console.error("Error fetching announcements:", error);
       } finally {
