@@ -134,12 +134,7 @@ export default function ChildProfiles() {
         >
           <TouchableOpacity
             onPress={() => router.back()}
-            style={{
-              width: 40,
-              height: 40,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
+            style={styles.backButton}
           >
             <ArrowLeft size={24} color="#374151" />
           </TouchableOpacity>
@@ -467,7 +462,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 20,
   },
-  backButton: {
+backButton: {
     width: 44,
     height: 44,
     justifyContent: "center",
