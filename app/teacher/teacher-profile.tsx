@@ -157,6 +157,14 @@ export default function TeacherProfile() {
         if (!res.ok) throw new Error("Failed to fetch profile");
 
         const data = await res.json();
+        console.log(
+          "📊 Full teacher data from API:",
+          JSON.stringify(data, null, 2)
+        );
+        console.log("🔍 Checking fields:");
+        console.log("  - teacher_id:", data.teacher_id);
+        console.log("  - main_group:", data.main_group);
+        console.log("  - co_group:", data.co_group);
         setTeacherData(data);
         setEditForm({
           phone: data.phone || "",
@@ -197,7 +205,7 @@ export default function TeacherProfile() {
           uri: manipulated.uri,
           name: "profile.jpg",
           type: "image/jpeg",
-        });
+        } as any);
         data.append("upload_preset", "littlesteps");
 
         console.log(" uploading image to Cloudinary...");
