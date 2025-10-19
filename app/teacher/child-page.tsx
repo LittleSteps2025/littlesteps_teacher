@@ -222,6 +222,22 @@ const ChildPage: React.FC = () => {
   const toggleSensitiveData = async () => {
     if (!showSensitiveData) {
       await fetchSensitiveData();
+
+      // Send notification to parent when sensitive data is accessed
+      if (child?.child_id && child?.name) {
+        try {
+          const teacherName = user?.user?.fullName || "A teacher";
+          await sendParentNotification(
+            child.child_id,
+            child.name,
+            teacherName,
+            "sensitive_data_access"
+          );
+        } catch (error) {
+          console.error("Error sending notification:", error);
+          // Continue even if notification fails
+        }
+      }
     }
     setShowSensitiveData(!showSensitiveData);
   };
