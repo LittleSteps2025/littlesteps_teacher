@@ -287,14 +287,14 @@ export default function AppointmentsView() {
                 style={styles.appointmentCard}
               >
                 <View style={styles.appointmentIconContainer}>
-                  <View
+                  {/* <View
                     style={[
                       styles.iconCircle,
                       { backgroundColor: statusColor + "15" },
                     ]}
                   >
                     <User size={24} color={statusColor} />
-                  </View>
+                  </View> */}
                 </View>
 
                 <View style={styles.appointmentContent}>
