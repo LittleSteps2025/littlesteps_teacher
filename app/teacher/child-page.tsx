@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native";
 import {
   ArrowLeft,
@@ -19,6 +20,7 @@ import {
   User,
   Eye,
   EyeOff,
+  Users,
 } from "lucide-react-native";
 import axios from "axios";
 import { API_BASE_URL } from "../../utility/config";
@@ -46,6 +48,7 @@ interface Child {
   address: string;
   emergency_notes: string;
   emergency_contact: EmergencyContact;
+  image?: string;
 }
 
 const ChildPage: React.FC = () => {
@@ -244,11 +247,17 @@ const ChildPage: React.FC = () => {
         </View>
 
         <View style={styles.profileSection}>
-          <View style={[styles.avatarRing, { borderColor: colorScheme.ring }]}>
-            <View style={styles.avatar}>
-              <User color="#AAA" size={40} />
-            </View>
-          </View>
+          <Image
+            source={
+              child.image && child.image.trim() !== ""
+                ? { uri: child.image }
+                : require("../../assets/images/default_profile.webp")
+            }
+            style={styles.profileImage}
+            onError={() =>
+              console.log("Failed to load image for child:", child.name)
+            }
+          />
           <Text style={styles.name}>{child.name}</Text>
           <Text style={styles.age}>Age {child.age}</Text>
           <Text style={[styles.group, { color: colorScheme.accent }]}>
@@ -279,6 +288,16 @@ const ChildPage: React.FC = () => {
           <View style={styles.cardContent}>
             <Text style={styles.cardLabel}>Address</Text>
             <Text style={styles.cardValue}>{child.address}</Text>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Users color="#2563EB" size={18} />
+          <View style={styles.cardContent}>
+            <Text style={styles.cardLabel}>Gender</Text>
+            <Text style={styles.cardValue}>
+              {child.gender.charAt(0).toUpperCase() + child.gender.slice(1)}
+            </Text>
           </View>
         </View>
 
@@ -422,7 +441,7 @@ const styles = StyleSheet.create({
   },
   avatarRing: {
     borderWidth: 4,
-    padding: 4,
+    padding: 6,
     borderRadius: 999,
     marginBottom: 10,
   },
@@ -603,6 +622,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 10,
     marginBottom: 30,
+  },
+  profileImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 10,
   },
 });
 
