@@ -134,12 +134,7 @@ export default function ChildProfiles() {
         >
           <TouchableOpacity
             onPress={() => router.back()}
-            style={{
-              width: 40,
-              height: 40,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
+            style={styles.backButton}
           >
             <ArrowLeft size={24} color="#374151" />
           </TouchableOpacity>
@@ -413,11 +408,19 @@ export default function ChildProfiles() {
                     >
                       <Image
                         source={
-                          child.profileImage
-                            ? { uri: child.profileImage }
+                          child.image && child.image.trim() !== ""
+                            ? { uri: child.image }
                             : require("../../../assets/images/default_profile.webp")
                         }
                         style={{ width: 60, height: 60, borderRadius: 30 }}
+                        onError={() => {
+                          // Fallback to default image if URL fails to load
+                          console.log(
+                            "Failed to load image for child:",
+                            child.id
+                          );
+                        }}
+                        resizeMode="cover"
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: 16 }}>
@@ -429,6 +432,16 @@ export default function ChildProfiles() {
                         }}
                       >
                         {child.name}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: "600",
+                          color: "#8B5CF6",
+                          marginBottom: 4,
+                        }}
+                      >
+                        ID: S{child.id}
                       </Text>
                       <Text
                         style={{
@@ -468,10 +481,18 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 22,
+    marginRight: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
     fontSize: 24,

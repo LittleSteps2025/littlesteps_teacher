@@ -343,7 +343,7 @@ export default function AppointmentsView() {
                 style={{ flex: 1 }}
                 keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
               >
-                <ScrollView 
+                <ScrollView
                   contentContainerStyle={styles.modalContent}
                   style={styles.modalScrollView}
                   showsVerticalScrollIndicator={true}
@@ -505,7 +505,18 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   backButton: {
-    paddingRight: 12,
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 22,
+    marginRight: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   titleContainer: {
     flex: 1,
