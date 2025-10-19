@@ -2,6 +2,7 @@ import CustomAlert from "@/components/CustomAlert";
 import { useUser } from "@/contexts/UserContext";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { manipulateAsync } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -24,7 +25,6 @@ import {
   EmailAuthProvider,
   updatePassword,
 } from "firebase/auth";
-import * as ImageManipulator from "expo-image-manipulator";
 
 export default function TeacherProfile() {
   const router = useRouter();

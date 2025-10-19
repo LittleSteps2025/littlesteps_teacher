@@ -4,6 +4,12 @@ import { Stack } from "expo-router";
 import { setupFCM } from "../fcm";
 import { useEffect } from "react";
 import Constants from "expo-constants";
+import { LogBox } from "react-native";
+// Import Firebase to ensure it's initialized early
+import "../config/firebase";
+
+// Suppress the "Each child in a list should have a unique key" warning
+LogBox.ignoreLogs(['Each child in a list should have a unique "key" prop']);
 
 export default function RootLayout() {
   useEffect(() => {

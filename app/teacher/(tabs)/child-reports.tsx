@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -103,7 +102,7 @@ export default function Children() {
                 <ArrowLeft size={24} color="#374151" />
               </TouchableOpacity>
               <View style={styles.headerTextContainer}>
-                <Text style={styles.headerTitle}>Today's Reports</Text>
+                <Text style={styles.headerTitle}>Today&apos;s Reports</Text>
                 <Text style={styles.headerSubtitle}>{formatDate()}</Text>
               </View>
             </View>
@@ -141,7 +140,7 @@ export default function Children() {
               {Array.isArray(children) && children.length > 0 ? (
                 children.map((child, index) => (
                   <View
-                    key={child.child_id}
+                    key={`${child.child_id}-${index}`}
                     style={[
                       styles.childCard,
                       {
