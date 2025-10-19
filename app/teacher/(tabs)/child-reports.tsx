@@ -15,7 +15,7 @@ import { API_BASE_URL } from "../../../utility/config";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { auth } from "../../../config/firebase";
 
-interface Child {
+interface ChildReport {
   child_id: string;
   child_name: string;
   child_age: number;
@@ -24,7 +24,7 @@ interface Child {
 }
 
 export default function Children() {
-  const [children, setChildren] = useState<Child[]>([]);
+  const [children, setChildren] = useState<ChildReport[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function Children() {
         }
 
         const data = await response.json();
-        setChildren(data);
+        setChildren(data as ChildReport[]);
       } catch (error) {
         console.error("Error fetching reports:", error);
       } finally {

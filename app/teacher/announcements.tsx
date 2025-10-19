@@ -16,9 +16,16 @@ import { ArrowLeft, Bell, Megaphone } from "lucide-react-native";
 import { API_BASE_URL } from "../../utility/config";
 import { auth } from "../../config/firebase";
 
+interface Announcement {
+  title: string;
+  details: string;
+  date: string;
+  time: string;
+}
+
 export default function Announcements() {
   const router = useRouter();
-  const [announcements, setAnnouncements] = useState([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,7 +61,7 @@ export default function Announcements() {
           "Number of announcements:",
           Array.isArray(data) ? data.length : "Not an array"
         );
-        setAnnouncements(data || []);
+        setAnnouncements((data as Announcement[]) || []);
       } catch (error) {
         console.error("Error fetching announcements:", error);
       } finally {

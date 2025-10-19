@@ -101,7 +101,7 @@ export default function Children() {
             </View>
 
             {/* Action Buttons */}
-            <View style={styles.actionButtons}>
+            {/* <View style={styles.actionButtons}>
               <TouchableOpacity
                 style={styles.showAllButton}
                 onPress={() => router.push("/teacher/all-reports")}
@@ -110,7 +110,7 @@ export default function Children() {
                 <Clock size={14} color="#8B5CF6" strokeWidth={2} />
                 <Text style={styles.showAllButtonText}>Show All</Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
 
             {/* Stats Card */}
             <View style={styles.statsCard}>
@@ -157,7 +157,7 @@ export default function Children() {
                           ID: S{child.child_id}
                         </Text>
                         <Text style={styles.childDetails}>
-                          {child.child_age} years • {child.child_group} Group
+                          {child.child_age} years • {child.group_name} Group
                         </Text>
                       </View>
                     </View>

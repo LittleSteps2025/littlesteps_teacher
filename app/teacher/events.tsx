@@ -28,14 +28,25 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { API_BASE_URL } from "../../utility/config";
 
+interface EventData {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  type: string;
+  status: "upcoming" | "completed";
+}
+
 export default function EventListAndDetail() {
   const router = useRouter();
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  const isDateUpcoming = (eventDateStr) => {
+  const isDateUpcoming = (eventDateStr: string): boolean => {
     const eventDate = new Date(eventDateStr);
     const today = new Date();
     eventDate.setHours(0, 0, 0, 0);
@@ -47,16 +58,18 @@ export default function EventListAndDetail() {
     fetch(`${API_BASE_URL}/api/events`)
       .then((res) => res.json())
       .then((data) => {
-        const mappedEvents = data.map((e, index) => ({
-          id: String(index + 1),
-          title: e.topic,
-          description: e.description,
-          date: e.date,
-          time: e.time,
-          location: e.venue,
-          type: "meeting",
-          status: isDateUpcoming(e.date) ? "upcoming" : "completed",
-        }));
+        const mappedEvents = data.map(
+          (e: any, index: number): EventData => ({
+            id: String(index + 1),
+            title: e.topic,
+            description: e.description,
+            date: e.date,
+            time: e.time,
+            location: e.venue,
+            type: "meeting",
+            status: isDateUpcoming(e.date) ? "upcoming" : "completed",
+          })
+        );
         setEvents(mappedEvents);
         setLoading(false);
       })
@@ -66,7 +79,7 @@ export default function EventListAndDetail() {
       });
   }, []);
 
-  const openEventDetails = (event) => {
+  const openEventDetails = (event: EventData) => {
     setSelectedEvent(event);
     setIsModalVisible(true);
   };
@@ -76,7 +89,7 @@ export default function EventListAndDetail() {
     setSelectedEvent(null);
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-GB", {
       day: "2-digit",
@@ -85,7 +98,11 @@ export default function EventListAndDetail() {
     });
   };
 
-  const getEventIcon = (type, size = 24, color = "#000") => {
+  const getEventIcon = (
+    type: string,
+    size: number = 24,
+    color: string = "#000"
+  ) => {
     switch (type) {
       case "sports":
         return <Dumbbell size={size} color={color} />;
@@ -100,7 +117,7 @@ export default function EventListAndDetail() {
     }
   };
 
-  const getEventColor = (type) => {
+  const getEventColor = (type: string): string => {
     switch (type) {
       case "sports":
         return "#10b981";

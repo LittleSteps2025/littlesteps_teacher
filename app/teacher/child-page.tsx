@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native";
 import {
   ArrowLeft,
@@ -19,6 +20,7 @@ import {
   User,
   Eye,
   EyeOff,
+  Users,
 } from "lucide-react-native";
 import axios from "axios";
 import { API_BASE_URL } from "../../utility/config";
@@ -35,6 +37,12 @@ interface EmergencyContact {
   phone: string;
 }
 
+interface MedicalReport {
+  type: string;
+  title: string;
+  description: string;
+}
+
 interface Child {
   child_id: string;
   name: string;
@@ -46,6 +54,7 @@ interface Child {
   address: string;
   emergency_notes: string;
   emergency_contact: EmergencyContact;
+  image?: string;
 }
 
 const ChildPage: React.FC = () => {
@@ -60,7 +69,7 @@ const ChildPage: React.FC = () => {
 
   const [bloodType, setBloodType] = useState("");
   const [allergies, setAllergies] = useState("");
-  const [medicalReports, setMedicalReports] = useState([]);
+  const [medicalReports, setMedicalReports] = useState<MedicalReport[]>([]);
   const [loadingSensitive, setLoadingSensitive] = useState(false);
 
   const getColorScheme = (gender: string) => {
@@ -201,7 +210,7 @@ const ChildPage: React.FC = () => {
 
       setBloodType(data.blood_type || "");
       setAllergies(data.allergies || "");
-      setMedicalReports(data.medical_records || []);
+      setMedicalReports((data.medical_records as MedicalReport[]) || []);
     } catch (error) {
       console.error("Error fetching sensitive data:", error);
       Alert.alert("Error", "Failed to load sensitive data.");
@@ -213,6 +222,22 @@ const ChildPage: React.FC = () => {
   const toggleSensitiveData = async () => {
     if (!showSensitiveData) {
       await fetchSensitiveData();
+
+      // Send notification to parent when sensitive data is accessed
+      if (child?.child_id && child?.name) {
+        try {
+          const teacherName = user?.user?.fullName || "A teacher";
+          await sendParentNotification(
+            child.child_id,
+            child.name,
+            teacherName,
+            "sensitive_data_access"
+          );
+        } catch (error) {
+          console.error("Error sending notification:", error);
+          // Continue even if notification fails
+        }
+      }
     }
     setShowSensitiveData(!showSensitiveData);
   };
@@ -244,11 +269,17 @@ const ChildPage: React.FC = () => {
         </View>
 
         <View style={styles.profileSection}>
-          <View style={[styles.avatarRing, { borderColor: colorScheme.ring }]}>
-            <View style={styles.avatar}>
-              <User color="#AAA" size={40} />
-            </View>
-          </View>
+          <Image
+            source={
+              child.image && child.image.trim() !== ""
+                ? { uri: child.image }
+                : require("../../assets/images/default_profile.webp")
+            }
+            style={styles.profileImage}
+            onError={() =>
+              console.log("Failed to load image for child:", child.name)
+            }
+          />
           <Text style={styles.name}>{child.name}</Text>
           <Text style={styles.age}>Age {child.age}</Text>
           <Text style={[styles.group, { color: colorScheme.accent }]}>
@@ -279,6 +310,16 @@ const ChildPage: React.FC = () => {
           <View style={styles.cardContent}>
             <Text style={styles.cardLabel}>Address</Text>
             <Text style={styles.cardValue}>{child.address}</Text>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Users color="#2563EB" size={18} />
+          <View style={styles.cardContent}>
+            <Text style={styles.cardLabel}>Gender</Text>
+            <Text style={styles.cardValue}>
+              {child.gender.charAt(0).toUpperCase() + child.gender.slice(1)}
+            </Text>
           </View>
         </View>
 
@@ -422,7 +463,7 @@ const styles = StyleSheet.create({
   },
   avatarRing: {
     borderWidth: 4,
-    padding: 4,
+    padding: 6,
     borderRadius: 999,
     marginBottom: 10,
   },
@@ -597,12 +638,26 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
   },
+  documentCard: {
+    backgroundColor: "#F9FAFB",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
   footerNote: {
     fontSize: 12,
     color: "#666",
     textAlign: "center",
     marginTop: 10,
     marginBottom: 30,
+  },
+  profileImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 10,
   },
 });
 

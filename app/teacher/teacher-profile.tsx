@@ -87,13 +87,13 @@ export default function TeacherProfile() {
   const handleBack = () => router.push("/teacher");
 
   // Modal handlers
-const openEditModal = () => {
-  setEditForm({
-    phone: teacherData?.phone || "",
-    address: teacherData?.address || "",
-  });
-  setIsEditModalVisible(true);
-};
+  const openEditModal = () => {
+    setEditForm({
+      phone: teacherData?.phone || "",
+      address: teacherData?.address || "",
+    });
+    setIsEditModalVisible(true);
+  };
   const closeEditModal = () => setIsEditModalVisible(false);
   const openPasswordModal = () => setIsPasswordModalVisible(true);
   const closePasswordModal = () => setIsPasswordModalVisible(false);
@@ -157,6 +157,14 @@ const openEditModal = () => {
         if (!res.ok) throw new Error("Failed to fetch profile");
 
         const data = await res.json();
+        console.log(
+          "📊 Full teacher data from API:",
+          JSON.stringify(data, null, 2)
+        );
+        console.log("🔍 Checking fields:");
+        console.log("  - teacher_id:", data.teacher_id);
+        console.log("  - main_group:", data.main_group);
+        console.log("  - co_group:", data.co_group);
         setTeacherData(data);
         setEditForm({
           phone: data.phone || "",
@@ -174,94 +182,80 @@ const openEditModal = () => {
     fetchProfile();
   }, []);
 
- 
+  const handleSaveProfile = async () => {
+    console.log(" inside handleSaveProfile");
+    try {
+      const updatedData: any = {
+        phone: editForm.phone,
+        address: editForm.address,
+      };
 
+      if (profileImage) {
+        console.log(" manipulating image...");
 
-const handleSaveProfile = async () => {
-  console.log("💖 inside handleSaveProfile");
-  try {
-    const updatedData: any = {
-      phone: editForm.phone,
-      address: editForm.address,
-    };
+        // Convert WebP/other formats to JPEG
+        const manipulated = await ImageManipulator.manipulateAsync(
+          profileImage,
+          [],
+          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+        );
 
-    if (profileImage) {
-      console.log("💖 manipulating image...");
+        const data = new FormData();
+        data.append("file", {
+          uri: manipulated.uri,
+          name: "profile.jpg",
+          type: "image/jpeg",
+        } as any);
+        data.append("upload_preset", "littlesteps");
 
-      // Convert WebP/other formats to JPEG
-      const manipulated = await manipulateAsync(
-        profileImage,
-        [],
-        { compress: 0.8, format: 'jpeg' }
-      );
+        console.log(" uploading image to Cloudinary...");
+        const cloudRes = await fetch(
+          "https://api.cloudinary.com/v1_1/desghwtvu/image/upload",
+          { method: "POST", body: data }
+        );
 
-      // ✅ Convert URI to Blob for web compatibility
-      const response = await fetch(manipulated.uri);
-      const blob = await response.blob();
+        const cloudData = await cloudRes.json();
+        if (!cloudData.secure_url) throw new Error("Image upload failed ");
 
-      const data = new FormData();
-      data.append("file", blob, "profile.jpg"); // Blob + filename
-      data.append("upload_preset", "littlesteps");
+        updatedData.profileImage = cloudData.secure_url;
+        console.log(" image uploaded, URL:", cloudData.secure_url);
+      }
 
-      console.log("💖 uploading image to Cloudinary...");
-      const cloudRes = await fetch(
-        "https://api.cloudinary.com/v1_1/desghwtvu/image/upload",
-        { method: "POST", body: data }
-      );
+      // Update profile in database
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        Alert.alert("Error", "You must be logged in to update profile.");
+        return;
+      }
 
-      const cloudData = await cloudRes.json();
-      if (!cloudData.secure_url) throw new Error("Image upload failed 💔");
+      const idToken = await currentUser.getIdToken();
 
-      updatedData.profileImage = cloudData.secure_url;
-      console.log("💖 image uploaded, URL:", cloudData.secure_url);
+      const res = await fetch(`${API_BASE_URL}/api/teacherprofile/edit`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(updatedData),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Update failed ");
+      }
+
+      const updated = await res.json();
+      if (!updated) throw new Error("Backend returned empty response ");
+
+      setTeacherData(updated);
+      await updateProfile(updated);
+      showCustomAlert("success", "Success", "Profile updated successfully! ");
+      closeEditModal();
+    } catch (error: any) {
+      console.error(" handleSaveProfile error:", error);
+      showCustomAlert("error", "Error", error.message || "Update failed ");
     }
-
-    // Update profile in database
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      Alert.alert("Error", "You must be logged in to update profile.");
-      return;
-    }
-
-    const idToken = await currentUser.getIdToken();
-
-    const res = await fetch(`${API_BASE_URL}/api/teacherprofile/edit`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
-      },
-      body: JSON.stringify(updatedData),
-    });
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || "Update failed 💔");
-    }
-
-    const updated = await res.json();
-    if (!updated) throw new Error("Backend returned empty response 💔");
-
-    setTeacherData(updated);
-    await updateProfile(updated);
-    showCustomAlert("success", "Success", "Profile updated successfully! 💖");
-    closeEditModal();
-
-  } catch (error: any) {
-    console.error("💔 handleSaveProfile error:", error);
-    showCustomAlert("error", "Error", error.message || "Update failed 💔");
-  }
-};
-
-
-
-
-
-
-
-
-
-
+  };
 
   const handlePasswordChange = async () => {
     if (!passwordForm.currentPassword || !passwordForm.newPassword) {
@@ -315,9 +309,9 @@ const handleSaveProfile = async () => {
     nic: teacherData?.nic || "N/A",
     main_group: teacherData?.main_group || "N/A",
     co_group: teacherData?.co_group || "N/A",
-   image: teacherData?.image,
-};
-console.log("Teacher data:", teacherData);
+    image: teacherData?.image,
+  };
+  console.log("Teacher data:", teacherData);
 
   const profileSections = [
     {
@@ -433,23 +427,21 @@ console.log("Teacher data:", teacherData);
                     elevation: 8,
                   }}
                 >
-                 <Image
-  source={
-    profileImage
-      ? { uri: profileImage } // newly picked
-      : displayData.image
-      ? { uri: displayData.image } // existing image from DB
-      : require("@/assets/images/default_profile.webp") // fallback
-  }
-  className="w-full h-full"
-  style={{
-    borderRadius: 48,
-    borderWidth: 3,
-    borderColor: "#3b82f6",
-  }}
-/>
-
-
+                  <Image
+                    source={
+                      profileImage
+                        ? { uri: profileImage } // newly picked
+                        : displayData.image
+                          ? { uri: displayData.image } // existing image from DB
+                          : require("@/assets/images/default_profile.webp") // fallback
+                    }
+                    className="w-full h-full"
+                    style={{
+                      borderRadius: 48,
+                      borderWidth: 3,
+                      borderColor: "#3b82f6",
+                    }}
+                  />
                 </View>
                 {/* Edit Icon */}
                 <View
@@ -699,9 +691,7 @@ console.log("Teacher data:", teacherData);
                   </Text>
                   <TextInput
                     value={editForm.phone}
-                    onChangeText={(value) =>
-                      handleInputChange("phone", value)
-                    }
+                    onChangeText={(value) => handleInputChange("phone", value)}
                     keyboardType="phone-pad"
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50"
                     style={{

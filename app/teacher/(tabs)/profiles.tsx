@@ -16,9 +16,26 @@ import { useRouter } from "expo-router";
 import { ArrowLeft, Filter, ChevronDown } from "lucide-react-native";
 import { API_BASE_URL } from "../../../utility/config";
 
+interface PackageOption {
+  name: string;
+}
+
+interface GroupOption {
+  name: string;
+}
+
+interface ChildData {
+  id: string;
+  name: string;
+  group: string;
+  school: string;
+  gender: string;
+  image?: string;
+}
+
 export default function ChildProfiles() {
   const router = useRouter();
-  const [childrenData, setChildrenData] = useState([]);
+  const [childrenData, setChildrenData] = useState<ChildData[]>([]);
   const [selectedPackage, setSelectedPackage] = useState("all");
   const [selectedGroup, setSelectedGroup] = useState("all");
   const [packageOptions, setPackageOptions] = useState([
@@ -45,7 +62,7 @@ export default function ChildProfiles() {
 
         setPackageOptions([
           { label: "All Packages", value: "all" },
-          ...pkgData.map((p /*: { name: string }*/) => ({
+          ...pkgData.map((p: PackageOption) => ({
             label: p.name,
             value: p.name,
           })),
@@ -53,7 +70,7 @@ export default function ChildProfiles() {
 
         setGroupOptions([
           { label: "All Groups", value: "all" },
-          ...grpData.map((g /*: { name: string }*/) => ({
+          ...grpData.map((g: GroupOption) => ({
             label: g.name,
             value: g.name,
           })),
@@ -74,7 +91,7 @@ export default function ChildProfiles() {
         const res = await fetch(`${API_BASE_URL}/api/teachers/child?${query}`);
         const data = await res.json();
         if (Array.isArray(data)) {
-          setChildrenData(data);
+          setChildrenData(data as ChildData[]);
         } else {
           console.error("Invalid data format: expected an array", data);
           setChildrenData([]);
@@ -87,13 +104,13 @@ export default function ChildProfiles() {
     fetchChildren();
   }, [selectedGroup, selectedPackage]);
 
-  const getGenderColors = (gender) => {
+  const getGenderColors = (gender: string) => {
     return gender === "female"
       ? { primary: "#ec4899", secondary: "#fce7f3", accent: "#be185d" }
       : { primary: "#3b82f6", secondary: "#dbeafe", accent: "#1d4ed8" };
   };
 
-  const handleChildPress = (childId) => {
+  const handleChildPress = (childId: string) => {
     router.push(`/teacher/child-page?childId=${childId}`);
   };
 

@@ -10,6 +10,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Modal,
+  Image,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { CameraView, Camera } from "expo-camera";
@@ -55,6 +56,11 @@ interface QRData {
   relationship: string;
 }
 
+interface Guardian {
+  name: string;
+  image?: string;
+}
+
 export default function DailyReportForm() {
   const { report_id } = useLocalSearchParams();
 
@@ -72,7 +78,7 @@ export default function DailyReportForm() {
   const [arrivalTime, setArrivalTime] = useState("");
   const [arrivalCompleted, setArrivalCompleted] = useState(false);
 
-  const [guardians, setGuardians] = useState<string[]>([]);
+  const [guardians, setGuardians] = useState<Guardian[]>([]);
   const [child_id, setChildId] = useState<string | null>(null);
 
   // QR Scanner states
@@ -81,6 +87,9 @@ export default function DailyReportForm() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scannedData, setScannedData] = useState<QRData | null>(null);
   const [qrVerified, setQrVerified] = useState(false);
+  const [selectedPickupImage, setSelectedPickupImage] = useState<string | null>(
+    null
+  );
 
   const totalTasks = reportFields.length + 1;
   const completedTasks =
@@ -227,13 +236,21 @@ export default function DailyReportForm() {
       try {
         const res = await fetch(`${API_BASE_URL}/api/guardians/${child_id}`);
         const data = await res.json();
-        setGuardians(data.map((g: any) => g.name));
+        setGuardians(data);
       } catch (e) {
         console.error("Failed to fetch guardians", e);
       }
     }
     fetchGuardians();
   }, [child_id]);
+
+  // Set pickup image when guardians are loaded and checkoutPerson exists
+  useEffect(() => {
+    if (guardians.length > 0 && checkoutPerson) {
+      const selectedGuardian = guardians.find((g) => g.name === checkoutPerson);
+      setSelectedPickupImage(selectedGuardian?.image || null);
+    }
+  }, [guardians, checkoutPerson]);
 
   const saveArrivalTime = async () => {
     const now = new Date();
@@ -838,6 +855,15 @@ export default function DailyReportForm() {
                       setCheckoutPerson(itemValue);
                       setQrVerified(false);
                       setScannedData(null);
+                      // Find the selected guardian and set their image
+                      if (itemValue) {
+                        const selectedGuardian = guardians.find(
+                          (g) => g.name === itemValue
+                        );
+                        setSelectedPickupImage(selectedGuardian?.image || null);
+                      } else {
+                        setSelectedPickupImage(null);
+                      }
                     }}
                     enabled={!isSubmitted}
                     style={styles.picker}
@@ -849,9 +875,9 @@ export default function DailyReportForm() {
                     />
                     {guardians.map((guardian) => (
                       <Picker.Item
-                        key={guardian}
-                        label={guardian}
-                        value={guardian}
+                        key={guardian.name}
+                        label={guardian.name}
+                        value={guardian.name}
                         color="#1F2937"
                       />
                     ))}
@@ -866,18 +892,24 @@ export default function DailyReportForm() {
                       </Text>
                     </View>
 
-                    {/* QR Scan Button */}
-                    {/* <TouchableOpacity
-                      style={styles.scanButton}
-                      onPress={() => setScanning(true)}
-                      disabled={isSubmitted}
-                    >
-                      <View style={styles.scanButtonContent}>
-                        <Text style={styles.scanButtonText}>
-                          Scan QR Code to Verify
-                        </Text>
-                      </View>
-                    </TouchableOpacity> */}
+                    {/* Pickup Person Image */}
+                    <View style={styles.pickupImageContainer}>
+                      {selectedPickupImage ? (
+                        <Image
+                          source={{ uri: selectedPickupImage }}
+                          style={styles.pickupImage}
+                          onError={() =>
+                            console.log("Failed to load pickup person image")
+                          }
+                        />
+                      ) : (
+                        <View style={styles.noImageContainer}>
+                          <Text style={styles.noImageText}>
+                            Sorry no image to display
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                   </>
                 ) : null}
               </View>
@@ -1094,16 +1126,6 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     height: "100%",
-  },
-
-  qrFrame: {
-    width: 250,
-    height: 250,
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    position: "absolute",
   },
 
   qrCornerTopLeft: {
@@ -1793,15 +1815,44 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontStyle: "italic",
   },
+  pickupImageContainer: {
+    marginTop: 10,
+    alignItems: "center",
+  },
+  pickupImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+  },
+  noImageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  noImageText: {
+    fontSize: 10,
+    color: "#6B7280",
+    textAlign: "center",
+    paddingHorizontal: 4,
+  },
   readOnlyBanner: {
-    backgroundColor: "#FFF3CD",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
+    backgroundColor: "#FEF3C7",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#F59E0B",
   },
   readOnlyText: {
-    color: "#856404",
     fontSize: 14,
-    textAlign: "center",
+    color: "#92400E",
+    fontWeight: "600",
   },
 });

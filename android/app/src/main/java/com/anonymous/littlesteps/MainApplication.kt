@@ -1,4 +1,4 @@
-package com.littlesteps
+package com.anonymous.littlesteps
 
 import android.app.Application
 import android.content.res.Configuration
