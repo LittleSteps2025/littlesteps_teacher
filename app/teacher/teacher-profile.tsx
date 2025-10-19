@@ -2,6 +2,7 @@ import CustomAlert from "@/components/CustomAlert";
 import { useUser } from "@/contexts/UserContext";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { manipulateAsync } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -24,7 +25,6 @@ import {
   EmailAuthProvider,
   updatePassword,
 } from "firebase/auth";
-import * as ImageManipulator from "expo-image-manipulator";
 
 export default function TeacherProfile() {
   const router = useRouter();
@@ -189,10 +189,10 @@ const handleSaveProfile = async () => {
       console.log("💖 manipulating image...");
 
       // Convert WebP/other formats to JPEG
-      const manipulated = await ImageManipulator.manipulateAsync(
+      const manipulated = await manipulateAsync(
         profileImage,
         [],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+        { compress: 0.8, format: 'jpeg' }
       );
 
       // ✅ Convert URI to Blob for web compatibility

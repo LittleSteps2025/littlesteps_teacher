@@ -15,8 +15,7 @@ import { Picker } from "@react-native-picker/picker";
 import { CameraView, Camera } from "expo-camera";
 
 import { API_BASE_URL } from "../../utility/config";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider , SafeAreaView } from "react-native-safe-area-context";
 
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -1730,7 +1729,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  qrFrame: {
+  qrFrameModal: {
     width: 250,
     height: 250,
     borderWidth: 2,
@@ -1793,5 +1792,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6B7280",
     fontStyle: "italic",
+  },
+  readOnlyBanner: {
+    backgroundColor: "#FFF3CD",
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  readOnlyText: {
+    color: "#856404",
+    fontSize: 14,
+    textAlign: "center",
   },
 });

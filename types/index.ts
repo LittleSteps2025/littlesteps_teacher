@@ -29,6 +29,7 @@ export interface Alert {
 }
 
 export interface Child {
+  child_group: ReactNode;
   child_id: string;
   child_name: string;
   child_age: number;
