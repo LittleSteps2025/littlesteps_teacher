@@ -106,7 +106,7 @@ export default function AppointmentsView() {
       const data = await res.json();
 
       // Normalize keys to match your frontend model
-      const formattedAppointments = data.map((a: any) => ({
+      const formattedAppointments: Appointment[] = data.map((a: any) => ({
         id: a.id,
         meetingDate: a.meetingdate || "",
         meetingTime: a.meetingtime || "",
@@ -114,7 +114,7 @@ export default function AppointmentsView() {
         response: a.response || "",
         childName: a.childname || "",
         parentName: a.name || "",
-        status: a.status || "pending",
+        status: (a.status || "pending") as Appointment["status"],
       }));
 
       setAppointments(formattedAppointments);
@@ -203,13 +203,21 @@ export default function AppointmentsView() {
       // Update local state
       const updatedAppointments = appointments.map((a) =>
         a.id === selectedAppointment.id
-          ? { ...a, status: "responded", response: responseText.trim() }
+          ? {
+              ...a,
+              status: "responded" as const,
+              response: responseText.trim(),
+            }
           : a
       );
       setAppointments(updatedAppointments);
       setSelectedAppointment((prev) =>
         prev
-          ? { ...prev, status: "responded", response: responseText.trim() }
+          ? {
+              ...prev,
+              status: "responded" as const,
+              response: responseText.trim(),
+            }
           : null
       );
 

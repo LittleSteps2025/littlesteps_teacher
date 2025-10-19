@@ -158,7 +158,7 @@ export default function Children() {
                           ID: S{child.child_id}
                         </Text>
                         <Text style={styles.childDetails}>
-                          {child.child_age} years • {child.child_group} Group
+                          {child.child_age} years • {child.group_name} Group
                         </Text>
                       </View>
                     </View>

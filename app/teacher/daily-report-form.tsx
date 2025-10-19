@@ -1129,16 +1129,6 @@ const styles = StyleSheet.create({
     height: "100%",
   },
 
-  qrFrame: {
-    width: 250,
-    height: 250,
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    position: "absolute",
-  },
-
   qrCornerTopLeft: {
     position: "absolute",
     top: 0,
@@ -1852,5 +1842,18 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     textAlign: "center",
     paddingHorizontal: 4,
+  },
+  readOnlyBanner: {
+    backgroundColor: "#FEF3C7",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#F59E0B",
+  },
+  readOnlyText: {
+    fontSize: 14,
+    color: "#92400E",
+    fontWeight: "600",
   },
 });

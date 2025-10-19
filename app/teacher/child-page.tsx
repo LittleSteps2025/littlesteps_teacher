@@ -37,6 +37,12 @@ interface EmergencyContact {
   phone: string;
 }
 
+interface MedicalReport {
+  type: string;
+  title: string;
+  description: string;
+}
+
 interface Child {
   child_id: string;
   name: string;
@@ -63,7 +69,7 @@ const ChildPage: React.FC = () => {
 
   const [bloodType, setBloodType] = useState("");
   const [allergies, setAllergies] = useState("");
-  const [medicalReports, setMedicalReports] = useState([]);
+  const [medicalReports, setMedicalReports] = useState<MedicalReport[]>([]);
   const [loadingSensitive, setLoadingSensitive] = useState(false);
 
   const getColorScheme = (gender: string) => {
@@ -204,7 +210,7 @@ const ChildPage: React.FC = () => {
 
       setBloodType(data.blood_type || "");
       setAllergies(data.allergies || "");
-      setMedicalReports(data.medical_records || []);
+      setMedicalReports((data.medical_records as MedicalReport[]) || []);
     } catch (error) {
       console.error("Error fetching sensitive data:", error);
       Alert.alert("Error", "Failed to load sensitive data.");
@@ -615,6 +621,14 @@ const styles = StyleSheet.create({
   infoBold: {
     fontWeight: "600",
     color: "#333",
+  },
+  documentCard: {
+    backgroundColor: "#F9FAFB",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   footerNote: {
     fontSize: 12,
