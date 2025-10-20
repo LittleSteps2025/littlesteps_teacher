@@ -11,7 +11,7 @@ export const API_BASE_URL =
    // : "http://192.168.8.169:5001";
 
     //vivo
-      : "http://192.168.43.237:5001";
+ //     : "http://192.168.43.237:5001";
     
 
         //pramodiIp
@@ -20,4 +20,4 @@ export const API_BASE_URL =
         // : "http://10.22.161.89:5001"; 
 
 //student wifi
- //      : "http://10.23.0.115:5001"; 
+     : "http://10.23.0.115:5001"; 
