@@ -2,6 +2,12 @@
 import { Platform, PermissionsAndroid } from "react-native";
 import Constants from "expo-constants";
 import { API_BASE_URL } from "./utility/config";
+import { getApp } from "@react-native-firebase/app";
+import {
+  getMessaging,
+  onTokenRefresh,
+  onMessage,
+} from "@react-native-firebase/messaging";
 
 // Call at app start
 export async function setupFCM() {
@@ -18,10 +24,9 @@ export async function setupFCM() {
 
     console.log("FCM: Setting up Firebase Cloud Messaging for Teacher App...");
 
-    // Dynamically import Firebase messaging to avoid initialization issues
-    const { default: messaging } = await import(
-      "@react-native-firebase/messaging"
-    );
+    // Get Firebase app and messaging instance using modular API
+    const app = getApp();
+    const messagingInstance = getMessaging(app);
 
     // On Android 13+ we need runtime 'POST_NOTIFICATIONS' permission
     if (Platform.OS === "android" && Platform.Version >= 33) {
@@ -35,10 +40,10 @@ export async function setupFCM() {
     }
 
     // Request permission (iOS will ask user)
-    const authStatus = await messaging().requestPermission();
+    const authStatus = await messagingInstance.requestPermission();
     const enabled =
-      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+      authStatus === messagingInstance.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messagingInstance.AuthorizationStatus.PROVISIONAL;
 
     if (!enabled) {
       console.log("FCM: Push permission not granted");
@@ -46,17 +51,17 @@ export async function setupFCM() {
     }
 
     // Get FCM token (this is the raw FCM device token)
-    const fcmToken = await messaging().getToken();
+    const fcmToken = await messagingInstance.getToken();
     console.log("FCM: Teacher app token obtained:", fcmToken);
 
-    // Subscribe to token refresh
-    messaging().onTokenRefresh((token) => {
+    // Subscribe to token refresh using modular API
+    onTokenRefresh(messagingInstance, (token) => {
       console.log("FCM: Teacher app token refreshed:", token);
       // TODO: send updated token to your backend
     });
 
-    // Listen for incoming messages (for teacher notifications)
-    messaging().onMessage(async (remoteMessage) => {
+    // Listen for incoming messages using modular API
+    onMessage(messagingInstance, async (remoteMessage) => {
       console.log("FCM: Teacher app message received:", remoteMessage);
       // Handle foreground messages here
     });
