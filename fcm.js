@@ -2,7 +2,6 @@
 import { Platform, PermissionsAndroid } from "react-native";
 import Constants from "expo-constants";
 import { API_BASE_URL } from "./utility/config";
-import { getApp } from "@react-native-firebase/app";
 import {
   getMessaging,
   onTokenRefresh,
@@ -24,9 +23,11 @@ export async function setupFCM() {
 
     console.log("FCM: Setting up Firebase Cloud Messaging for Teacher App...");
 
-    // Get Firebase app and messaging instance using modular API
-    const app = getApp();
-    const messagingInstance = getMessaging(app);
+    // Wait for Firebase to be initialized
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Get messaging instance
+    const messagingInstance = getMessaging();
 
     // On Android 13+ we need runtime 'POST_NOTIFICATIONS' permission
     if (Platform.OS === "android" && Platform.Version >= 33) {
@@ -54,13 +55,22 @@ export async function setupFCM() {
     const fcmToken = await messagingInstance.getToken();
     console.log("FCM: Teacher app token obtained:", fcmToken);
 
-    // Subscribe to token refresh using modular API
-    onTokenRefresh(messagingInstance, (token) => {
+    // Subscribe to token refresh
+    onTokenRefresh(messagingInstance, async (token) => {
       console.log("FCM: Teacher app token refreshed:", token);
-      // TODO: send updated token to your backend
+      // Try to register updated token if we have user data
+      try {
+        // This will be called when token refreshes, but we may not have user context here
+        // The token will be registered when the user visits their profile
+        console.log(
+          "FCM: Token refreshed - will register on next profile visit"
+        );
+      } catch (error) {
+        console.error("FCM: Error handling token refresh:", error);
+      }
     });
 
-    // Listen for incoming messages using modular API
+    // Listen for incoming messages
     onMessage(messagingInstance, async (remoteMessage) => {
       console.log("FCM: Teacher app message received:", remoteMessage);
       // Handle foreground messages here
@@ -72,6 +82,7 @@ export async function setupFCM() {
     console.warn(
       "FCM: Make sure you're using a development build, not Expo Go"
     );
+    // Don't rethrow the error - let the app continue without FCM
     return null;
   }
 }
@@ -141,7 +152,7 @@ export async function sendParentNotification(
 
     // Send notification via backend
     const notificationResponse = await fetch(
-      `${API_BASE_URL}/api/send-notification`,
+      `${API_BASE_URL}/api/notifications/send-notification`,
       {
         method: "POST",
         headers: {
@@ -167,6 +178,51 @@ export async function sendParentNotification(
     return true;
   } catch (error) {
     console.error("FCM: Error sending parent notification:", error);
+    return false;
+  }
+}
+
+// Function to register FCM token with backend
+export async function registerFCMToken(userId, fcmToken) {
+  try {
+    console.log("FCM: Registering token for user:", userId);
+
+    // Get Firebase ID token for authentication
+    const { auth } = await import("./config/firebase");
+
+    if (!auth.currentUser) {
+      console.error("FCM: No authenticated user found");
+      return false;
+    }
+
+    const idToken = await auth.currentUser.getIdToken();
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/notifications/update-fcm-token`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          userId: userId,
+          fcmToken: fcmToken,
+        }),
+      }
+    );
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log("FCM: Token registered successfully:", result);
+      return true;
+    } else {
+      const error = await response.json();
+      console.error("FCM: Failed to register token:", error);
+      return false;
+    }
+  } catch (error) {
+    console.error("FCM: Error registering token:", error);
     return false;
   }
 }
