@@ -415,7 +415,7 @@ export default function DailyReportForm() {
       );
 
       if (response.ok) {
-        Alert.alert("Progress Saved", "Report submitted");
+        Alert.alert("Report submitted");
         setIsSubmitted(true);
 
         // Send FCM notification to parent about child checkout
@@ -681,10 +681,10 @@ export default function DailyReportForm() {
             <View style={styles.headerContent}>
               <Text style={styles.headerTitle}>Daily Report</Text>
               <View style={styles.headerInfo}>
-                <View style={styles.headerInfoItem}>
+                {/* <View style={styles.headerInfoItem}>
                   <User color="#fff" size={16} />
                   <Text style={styles.headerInfoText}>{childName}</Text>
-                </View>
+                </View> */}
                 <View style={styles.headerInfoItem}>
                   <Calendar color="#fff" size={16} />
                   <Text style={styles.headerInfoText}>{reportDate}</Text>
