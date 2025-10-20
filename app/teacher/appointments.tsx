@@ -36,7 +36,7 @@ interface Appointment {
   meetingDate: string;
   meetingTime: string;
   reason: string;
-  status: "pending" | "responded" | "completed";
+  status: "pending" | "responded" | "confirmed" | "cancelled" | "completed";
   response?: string;
   parentName: string;
 }
@@ -48,8 +48,12 @@ const getStatusColor = (status: string) => {
       return "#f59e0b";
     case "responded":
       return "#3b82f6";
-    case "completed":
+    case "confirmed":
       return "#10b981";
+    case "cancelled":
+      return "#ef4444";
+    case "completed":
+      return "#8b5cf6";
     default:
       return "#6b7280";
   }
@@ -61,8 +65,12 @@ const getStatusIcon = (status: string) => {
       return <AlertCircle size={16} color="#f59e0b" />;
     case "responded":
       return <MessageSquare size={16} color="#3b82f6" />;
-    case "completed":
+    case "confirmed":
       return <CheckCircle size={16} color="#10b981" />;
+    case "cancelled":
+      return <X size={16} color="#ef4444" />;
+    case "completed":
+      return <CheckCircle size={16} color="#8b5cf6" />;
     default:
       return <Clock size={16} color="#6b7280" />;
   }
@@ -77,6 +85,7 @@ export default function AppointmentsView() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [responseText, setResponseText] = useState("");
   const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
+  const [isChangingStatus, setIsChangingStatus] = useState(false);
 
   const fetchAppointments = async () => {
     setLoading(true);
@@ -106,7 +115,7 @@ export default function AppointmentsView() {
       const data = await res.json();
 
       // Normalize keys to match your frontend model
-      const formattedAppointments = data.map((a: any) => ({
+      const formattedAppointments: Appointment[] = data.map((a: any) => ({
         id: a.id,
         meetingDate: a.meetingdate || "",
         meetingTime: a.meetingtime || "",
@@ -114,7 +123,7 @@ export default function AppointmentsView() {
         response: a.response || "",
         childName: a.childname || "",
         parentName: a.name || "",
-        status: a.status || "pending",
+        status: (a.status || "pending") as Appointment["status"],
       }));
 
       setAppointments(formattedAppointments);
@@ -203,13 +212,21 @@ export default function AppointmentsView() {
       // Update local state
       const updatedAppointments = appointments.map((a) =>
         a.id === selectedAppointment.id
-          ? { ...a, status: "responded", response: responseText.trim() }
+          ? {
+              ...a,
+              status: "responded" as const,
+              response: responseText.trim(),
+            }
           : a
       );
       setAppointments(updatedAppointments);
       setSelectedAppointment((prev) =>
         prev
-          ? { ...prev, status: "responded", response: responseText.trim() }
+          ? {
+              ...prev,
+              status: "responded" as const,
+              response: responseText.trim(),
+            }
           : null
       );
 
@@ -218,6 +235,48 @@ export default function AppointmentsView() {
     } catch (error: any) {
       setIsSubmittingResponse(false);
       Alert.alert("Error", error.message || "Failed to submit response.");
+    }
+  };
+
+  const handleStatusChange = async (newStatus: Appointment["status"]) => {
+    if (!selectedAppointment) return;
+
+    setIsChangingStatus(true);
+
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error("Not logged in");
+
+      const idToken = await currentUser.getIdToken();
+
+      const res = await fetch(
+        `${API_BASE_URL}/api/appointments/status/${selectedAppointment.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to update status");
+
+      // Update local state
+      const updatedAppointments = appointments.map((a) =>
+        a.id === selectedAppointment.id ? { ...a, status: newStatus } : a
+      );
+      setAppointments(updatedAppointments);
+      setSelectedAppointment((prev) =>
+        prev ? { ...prev, status: newStatus } : null
+      );
+
+      setIsChangingStatus(false);
+      Alert.alert("Success", `Status changed to ${newStatus}!`);
+    } catch (error: any) {
+      setIsChangingStatus(false);
+      Alert.alert("Error", error.message || "Failed to update status.");
     }
   };
 
@@ -279,14 +338,14 @@ export default function AppointmentsView() {
                 style={styles.appointmentCard}
               >
                 <View style={styles.appointmentIconContainer}>
-                  <View
+                  {/* <View
                     style={[
                       styles.iconCircle,
                       { backgroundColor: statusColor + "15" },
                     ]}
                   >
                     <User size={24} color={statusColor} />
-                  </View>
+                  </View> */}
                 </View>
 
                 <View style={styles.appointmentContent}>
@@ -343,7 +402,7 @@ export default function AppointmentsView() {
                 style={{ flex: 1 }}
                 keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
               >
-                <ScrollView 
+                <ScrollView
                   contentContainerStyle={styles.modalContent}
                   style={styles.modalScrollView}
                   showsVerticalScrollIndicator={true}
@@ -484,6 +543,72 @@ export default function AppointmentsView() {
                           </>
                         )}
                       </View>
+
+                      {/* Status Change Section */}
+                      <View style={styles.statusChangeContainer}>
+                        <Text style={styles.statusChangeLabel}>
+                          Change Status
+                        </Text>
+                        <View style={styles.statusButtonsRow}>
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            style={[
+                              styles.statusButton,
+                              styles.statusButtonConfirmed,
+                              selectedAppointment.status === "confirmed" &&
+                                styles.statusButtonActive,
+                            ]}
+                            onPress={() => handleStatusChange("confirmed")}
+                            disabled={isChangingStatus}
+                          >
+                            <CheckCircle size={18} color="#fff" />
+                            <Text style={styles.statusButtonText}>
+                              Confirmed
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            style={[
+                              styles.statusButton,
+                              styles.statusButtonCancelled,
+                              selectedAppointment.status === "cancelled" &&
+                                styles.statusButtonActive,
+                            ]}
+                            onPress={() => handleStatusChange("cancelled")}
+                            disabled={isChangingStatus}
+                          >
+                            <X size={18} color="#fff" />
+                            <Text style={styles.statusButtonText}>
+                              Cancelled
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            style={[
+                              styles.statusButton,
+                              styles.statusButtonCompleted,
+                              selectedAppointment.status === "completed" &&
+                                styles.statusButtonActive,
+                            ]}
+                            onPress={() => handleStatusChange("completed")}
+                            disabled={isChangingStatus}
+                          >
+                            <CheckCircle size={18} color="#fff" />
+                            <Text style={styles.statusButtonText}>
+                              Completed
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                        {isChangingStatus && (
+                          <ActivityIndicator
+                            size="small"
+                            color="#7c3aed"
+                            style={{ marginTop: 10 }}
+                          />
+                        )}
+                      </View>
                     </>
                   )}
                 </ScrollView>
@@ -505,7 +630,18 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   backButton: {
-    paddingRight: 12,
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 22,
+    marginRight: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   titleContainer: {
     flex: 1,
@@ -745,5 +881,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     marginLeft: 8,
+  },
+  statusChangeContainer: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginTop: 16,
+  },
+  statusChangeLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#374151",
+    marginBottom: 12,
+  },
+  statusButtonsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  statusButton: {
+    flex: 1,
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  statusButtonConfirmed: {
+    backgroundColor: "#10b981",
+  },
+  statusButtonCancelled: {
+    backgroundColor: "#ef4444",
+  },
+  statusButtonCompleted: {
+    backgroundColor: "#8b5cf6",
+  },
+  statusButtonActive: {
+    borderColor: "#1f2937",
+    borderWidth: 3,
+  },
+  statusButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 6,
+    textAlign: "center",
   },
 });

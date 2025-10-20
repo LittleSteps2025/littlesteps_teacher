@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,10 +13,18 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../../utility/config";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { auth } from '../../../config/firebase';
+import { auth } from "../../../config/firebase";
+
+interface ChildReport {
+  child_id: string;
+  child_name: string;
+  child_age: number;
+  group_name: string;
+  report_id: string;
+}
 
 export default function Children() {
-  const [children, setChildren] = useState([]);
+  const [children, setChildren] = useState<ChildReport[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,7 +44,7 @@ export default function Children() {
         const response = await fetch(`${API_BASE_URL}/api/reports`, {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${idToken}`,
+            Authorization: `Bearer ${idToken}`,
             "Content-Type": "application/json",
           },
         });
@@ -48,7 +55,7 @@ export default function Children() {
         }
 
         const data = await response.json();
-        setChildren(data);
+        setChildren(data as ChildReport[]);
       } catch (error) {
         console.error("Error fetching reports:", error);
       } finally {
@@ -60,11 +67,11 @@ export default function Children() {
   }, []);
 
   const formatDate = () => {
-    return new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -95,7 +102,7 @@ export default function Children() {
                 <ArrowLeft size={24} color="#374151" />
               </TouchableOpacity>
               <View style={styles.headerTextContainer}>
-                <Text style={styles.headerTitle}>Today's Reports</Text>
+                <Text style={styles.headerTitle}>Today&apos;s Reports</Text>
                 <Text style={styles.headerSubtitle}>{formatDate()}</Text>
               </View>
             </View>
@@ -104,7 +111,7 @@ export default function Children() {
             <View style={styles.actionButtons}>
               <TouchableOpacity
                 style={styles.showAllButton}
-                onPress={() => router.push('/teacher/all-reports')}
+                onPress={() => router.push("/teacher/all-reports")}
                 activeOpacity={0.8}
               >
                 <Clock size={14} color="#8B5CF6" strokeWidth={2} />
@@ -132,25 +139,31 @@ export default function Children() {
             <View style={styles.content}>
               {Array.isArray(children) && children.length > 0 ? (
                 children.map((child, index) => (
-                  <View key={child.child_id} style={[
-                    styles.childCard,
-                    { 
-                      marginTop: index === 0 ? 0 : 12,
-                      transform: [{ scale: 1 }] 
-                    }
-                  ]}>
+                  <View
+                    key={`${child.child_id}-${index}`}
+                    style={[
+                      styles.childCard,
+                      {
+                        marginTop: index === 0 ? 0 : 12,
+                        transform: [{ scale: 1 }],
+                      },
+                    ]}
+                  >
                     <View style={styles.childHeader}>
                       <View style={styles.avatarContainer}>
-                        <Image
+                        {/* <Image
                           source={{
                             uri: child.avatar || "https://via.placeholder.com/60",
                           }}
                           style={styles.avatar}
-                        />
-                        <View style={styles.onlineIndicator} />
+                        /> */}
+                        {/* <View style={styles.onlineIndicator} /> */}
                       </View>
                       <View style={styles.childInfo}>
                         <Text style={styles.childName}>{child.child_name}</Text>
+                        <Text style={styles.childId}>
+                          ID: S{child.child_id}
+                        </Text>
                         <Text style={styles.childDetails}>
                           {child.child_age} years • {child.group_name} Group
                         </Text>
@@ -184,7 +197,7 @@ export default function Children() {
                   </Text>
                   <TouchableOpacity
                     style={styles.emptyButton}
-                    onPress={() => router.push('/teacher/all-reports')}
+                    onPress={() => router.push("/teacher/all-reports")}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.emptyButtonText}>View All Reports</Text>
@@ -215,12 +228,12 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: "center",
     alignItems: "center",
-    // backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 22,
     marginRight: 12,
-    // shadowColor: "#000",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.0,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
@@ -349,6 +362,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#1F2937",
+    marginBottom: 2,
+  },
+  childId: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#8B5CF6",
     marginBottom: 4,
   },
   childDetails: {

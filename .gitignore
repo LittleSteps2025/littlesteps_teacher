@@ -5,3 +5,6 @@
 expo-env.d.ts
 # @end expo-cli
 node_modules
+config/firebase.ts
+android/app/google-services.json
+firebaseServiceAccount.json

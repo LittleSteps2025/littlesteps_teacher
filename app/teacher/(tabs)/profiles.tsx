@@ -16,9 +16,26 @@ import { useRouter } from "expo-router";
 import { ArrowLeft, Filter, ChevronDown } from "lucide-react-native";
 import { API_BASE_URL } from "../../../utility/config";
 
+interface PackageOption {
+  name: string;
+}
+
+interface GroupOption {
+  name: string;
+}
+
+interface ChildData {
+  id: string;
+  name: string;
+  group: string;
+  school: string;
+  gender: string;
+  image?: string;
+}
+
 export default function ChildProfiles() {
   const router = useRouter();
-  const [childrenData, setChildrenData] = useState([]);
+  const [childrenData, setChildrenData] = useState<ChildData[]>([]);
   const [selectedPackage, setSelectedPackage] = useState("all");
   const [selectedGroup, setSelectedGroup] = useState("all");
   const [packageOptions, setPackageOptions] = useState([
@@ -34,8 +51,8 @@ export default function ChildProfiles() {
     const fetchFilters = async () => {
       try {
         const [pkgRes, grpRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/child/filter/packages`),
-          fetch(`${API_BASE_URL}/api/child/filter/groups`),
+          fetch(`${API_BASE_URL}/api/teachers/child/filter/packages`),
+          fetch(`${API_BASE_URL}/api/teachers/child/filter/groups`),
         ]);
 
         const [pkgData, grpData] = await Promise.all([
@@ -45,7 +62,7 @@ export default function ChildProfiles() {
 
         setPackageOptions([
           { label: "All Packages", value: "all" },
-          ...pkgData.map((p /*: { name: string }*/) => ({
+          ...pkgData.map((p: PackageOption) => ({
             label: p.name,
             value: p.name,
           })),
@@ -53,7 +70,7 @@ export default function ChildProfiles() {
 
         setGroupOptions([
           { label: "All Groups", value: "all" },
-          ...grpData.map((g /*: { name: string }*/) => ({
+          ...grpData.map((g: GroupOption) => ({
             label: g.name,
             value: g.name,
           })),
@@ -71,10 +88,10 @@ export default function ChildProfiles() {
         const month = new Date().getMonth() + 1;
         const query = `group=${selectedGroup}&pkg=${selectedPackage}&month=${month}`;
 
-        const res = await fetch(`${API_BASE_URL}/api/child?${query}`);
+        const res = await fetch(`${API_BASE_URL}/api/teachers/child?${query}`);
         const data = await res.json();
         if (Array.isArray(data)) {
-          setChildrenData(data);
+          setChildrenData(data as ChildData[]);
         } else {
           console.error("Invalid data format: expected an array", data);
           setChildrenData([]);
@@ -87,13 +104,13 @@ export default function ChildProfiles() {
     fetchChildren();
   }, [selectedGroup, selectedPackage]);
 
-  const getGenderColors = (gender) => {
+  const getGenderColors = (gender: string) => {
     return gender === "female"
       ? { primary: "#ec4899", secondary: "#fce7f3", accent: "#be185d" }
       : { primary: "#3b82f6", secondary: "#dbeafe", accent: "#1d4ed8" };
   };
 
-  const handleChildPress = (childId) => {
+  const handleChildPress = (childId: string) => {
     router.push(`/teacher/child-page?childId=${childId}`);
   };
 
@@ -134,12 +151,7 @@ export default function ChildProfiles() {
         >
           <TouchableOpacity
             onPress={() => router.back()}
-            style={{
-              width: 40,
-              height: 40,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
+            style={styles.backButton}
           >
             <ArrowLeft size={24} color="#374151" />
           </TouchableOpacity>
@@ -413,11 +425,19 @@ export default function ChildProfiles() {
                     >
                       <Image
                         source={
-                          child.profileImage
-                            ? { uri: child.profileImage }
+                          child.image && child.image.trim() !== ""
+                            ? { uri: child.image }
                             : require("../../../assets/images/default_profile.webp")
                         }
                         style={{ width: 60, height: 60, borderRadius: 30 }}
+                        onError={() => {
+                          // Fallback to default image if URL fails to load
+                          console.log(
+                            "Failed to load image for child:",
+                            child.id
+                          );
+                        }}
+                        resizeMode="cover"
                       />
                     </View>
                     <View style={{ flex: 1, marginLeft: 16 }}>
@@ -433,11 +453,21 @@ export default function ChildProfiles() {
                       <Text
                         style={{
                           fontSize: 14,
+                          fontWeight: "600",
+                          color: "#8B5CF6",
+                          marginBottom: 4,
+                        }}
+                      >
+                        ID: S{child.id}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 14,
                           color: "#6b7280",
                           marginBottom: 8,
                         }}
                       >
-                         {child.group} Group
+                        {child.group} Group
                       </Text>
                       <Text style={{ fontSize: 12, color: "#9ca3af" }}>
                         {child.school}
@@ -454,9 +484,6 @@ export default function ChildProfiles() {
   );
 }
 
-
-
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1, marginTop: 28 },
@@ -471,10 +498,18 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 22,
+    marginRight: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
     fontSize: 24,
