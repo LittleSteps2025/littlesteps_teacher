@@ -203,7 +203,7 @@ const ChildPage: React.FC = () => {
     setLoadingSensitive(true);
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/child/${childId}/sensitive`
+        `${API_BASE_URL}/api/teacher/children/${childId}/sensitive`
       );
       const data = response.data;
       console.log("Sensitive Data:", response.data);
